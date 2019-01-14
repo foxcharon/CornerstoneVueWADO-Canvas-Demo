@@ -1,6 +1,8 @@
-# CornerstoneVueWADO
+# CornerstoneVueWADO-Canvas-Demo
 
-> 一个基于 Cornerstone 解析并显示 Dicom 图像的 Vue 项目
+> 一个基于 Cornerstone 解析并显示 Dicom 图像的 Vue 项目。在原项目上加上了绘制多边形的功能。
+
+基于项目[https://github.com/GleasonBian/CornerstoneVueWADO](https://github.com/GleasonBian/CornerstoneVueWADO).
 
 ## Build Setup
 
@@ -20,16 +22,3 @@ npm install dicom-parser --save
 npm run dev
 
 ```
-# 使用方法
-
-* 具体使用步骤 请看 HelloWorld.vue 文件
-* 如需帮助请 发送邮件给我 Email: bianliuzhu@gmail.com
-代码图片
-![代码](https://github.com/GleasonBian/GithubReadmeImage/blob/master/code.jpg)
-
-response(res):
-![response](https://github.com/GleasonBian/GithubReadmeImage/blob/master/res.jpg)
-
-![cornerstoneWADO_res.jpg](https://github.com/GleasonBian/GithubReadmeImage/blob/master/cornerstoneWADO_res.jpg)
-
-![cornerstoneWADO_res.body.value.jpg](https://github.com/GleasonBian/GithubReadmeImage/blob/master/cornerstoneWADO_res.body.value.jpg)
