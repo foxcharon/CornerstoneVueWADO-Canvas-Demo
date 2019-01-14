@@ -109,6 +109,7 @@ export default {
       isMouseTransformingPolygonBoolean:false,    // true 此时正在拉伸某个多边形，依赖上一个变量
       polygonTransformingMouseStartedCoordinateObject:null,    // 鼠标拉伸多边形 前一次的坐标
       polygonTransformingMouseContinueCoordinateObject:null,    // 鼠标拉伸多边形 现在的坐标
+      canvasSizeObject:null,    // 记录现canvas大小的对象
       // EDIT END
     };
   },
@@ -279,6 +280,10 @@ export default {
       // this.$refs.canvas.width = this.$refs.canvas.height
       const c = document.getElementsByTagName("canvas")[0]
       this.canvasObject = c.getContext('2d')
+      this.canvasSizeObject = {
+        width:c.width,
+        height:c.height
+      }
       // this.canvasOriginObject = this.canvasObject
       // console.log(this.canvasObject)
       // console.log(this.$tools.randomString())
@@ -358,7 +363,7 @@ export default {
     selectValueString:function(new_value, old_value){
       if (new_value === "1" && this.isCanCopyOriginCanvasDataBoolean) {
         this.isCanCopyOriginCanvasDataBoolean = false
-        this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, 526, 526)
+        this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, this.canvasSizeObject.width, this.canvasSizeObject.height)
       }
     }
   }
@@ -390,6 +395,10 @@ function painting() {
           if (_this.isMouseCanTranslatePolygonBoolean || _this.isMouseTranslatingPolygonBoolean || _this.isMouseCanTransformPolygonBoolean || _this.isMouseTransformingPolygonBoolean) {
             return
           }
+          // 如果不在绘制选项中就不绘制
+          if (_this.selectValueString !== "1") {
+            return
+          }
           // 多边形
           // if (_this.selectValueString === "1") {
             // alert("???")
@@ -400,7 +409,7 @@ function painting() {
     $(document)
         .off("mousemove", ".image-canvas")
         .on("mousemove", ".image-canvas", function(event) {
-          // 接近中心点检测
+          // 
           if (_this.isPaintedBoolean) {
             let x = event.offsetX, y = event.offsetY
             const judge_number = _this.centerPointHoverJudgeNumber
@@ -412,6 +421,7 @@ function painting() {
               if (!item.completed) {
                 return
               }
+              // 计算中心点
               let x_ed = item.centerPointObject.center_x
               let y_ed = item.centerPointObject.center_y
               let hori = x_ed - x    // 横向距离
@@ -497,7 +507,7 @@ function painting() {
                 // 鼠标现坐标记录 多边形现坐标计算
                 // console.log(_this.isMouseTransformingPolygonBoolean)
                 if (_this.isMouseTransformingPolygonBoolean) {
-                  if (!item.pointActiveIndex) {
+                  if (item.pointActiveIndex === null) {
                     return
                   }
                   // 鼠标移动 mouseleave 记录坐标B
