@@ -1,6 +1,6 @@
 # CornerstoneVueWADO-Canvas-Demo
 
-> 一个基于 Cornerstone 解析并显示 Dicom 图像的 Vue 项目。在原项目上加上了绘制多边形的功能。
+> 一个基于 Cornerstone 解析并显示 Dicom 图像的 Vue 项目。在原项目上加上了绘制多边形的功能。 
 
 基于项目[https://github.com/GleasonBian/CornerstoneVueWADO](https://github.com/GleasonBian/CornerstoneVueWADO).
 
