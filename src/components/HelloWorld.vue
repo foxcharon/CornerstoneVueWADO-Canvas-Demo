@@ -25,6 +25,10 @@
       <button @click="submitTestFunc">selectValueString</button>
       <button @click="clearTestFunc">clear</button>
       <button @click="moveTestFunc">move</button>
+      <select v-model="selectColorFilterString">
+        <option value="0">正常</option>
+        <option value="1">反色</option>
+      </select>
     </div>
   </div>
 
@@ -86,7 +90,8 @@ export default {
       canvasOriginDataObject:null,   // CanvasRenderingContext2D-imgdata-origin
       canvasMarkDataArray:[],    // 记录canvas标注数据的数组
       anotherCanvasMarkDataArray:[],    // 记录canvas标注数据的数组
-      selectValueString:"0",
+      selectValueString:"0",    // 选择模式
+      selectColorFilterString:"0",    // 选择滤镜 0 为正常
       isPointingBoolean:false,    // 是否正在绘制
       sqrtStandandNumber:10,  // 过近点计算标准值
       minPointNumNumber:3,  // 最少要几个点
@@ -317,8 +322,8 @@ export default {
       this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, width, height)
       if (this.canvasOriginDataObject.data[3] !== 0) {
         // const Color = this.$color
-        let color_array = new this.$Color_class(this.canvasObject.getImageData(0, 0, width, height).data)
-        let color_result = color_array.get_reverse
+        // let color_array = new this.$Color_class(this.canvasObject.getImageData(0, 0, width, height).data)
+        // let color_result = color_array.get_reverse
         // console.log(color_result)
         return
       } else {
@@ -347,7 +352,7 @@ export default {
         // 绘制多边形
         if (item.completed && item.type === "polygon") {
           drawPointFunc(item.pointDataArray)
-          drawArcBeforeFunc(item.pointDataArray, item.pointActiveIndex)
+          drawArcBeforeFunc(item.pointDataArray, item.pointActiveIndex, item.type)
         }        
         // item.centerPointObject === null 不计算中心点
         if (item.completed && item.centerPointObject && item.type === "polygon") {
@@ -377,6 +382,24 @@ export default {
         centerPointObject.center_x = centerPointObject.center_x
         centerPointObject.center_y = centerPointObject.center_y
       }      
+    },
+    // 滤镜
+    changeCanvasColorFilterFunc(canvas, new_color_array){
+      // console.log(this.canvasOriginDataObject)
+      // console.log(new_color_array)
+      this.clearTestFunc()
+      const width = this.canvasSizeObject.width, 
+        height = this.canvasSizeObject.height;
+      let c = this.canvasObject.getImageData(0, 0, width, height)
+      this.updateArrayValue(c.data, new_color_array)
+      this.canvasObject.putImageData(c, 0, 0)
+      this.reDrawFunc()
+    },
+    // update uint8array
+    updateArrayValue(c, d){
+      d.forEach((item, index)=>{
+        c[index] = item
+      })
     }
     // getXYMaxMinPointFunc(arr, index){
     //   return arr[index]
@@ -393,11 +416,37 @@ export default {
     console.log(arr)
   },
   watch:{
+    // 用户操作选项
     selectValueString:function(new_value, old_value){
       if (new_value === "1" && this.isCanCopyOriginCanvasDataBoolean) {
         this.isCanCopyOriginCanvasDataBoolean = false
         // this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, this.canvasSizeObject.width, this.canvasSizeObject.height)
       }
+    },
+    // 色彩滤镜选项
+    selectColorFilterString:function(new_value, old_value){
+      // console.log(JSON.parse(JSON.stringify({width:111,height:[111,222,333]})))
+      // let new_color_obj = JSON.parse(JSON.stringify(this.canvasOriginDataObject));
+      // console.log(JSON.stringify(this.canvasOriginDataObject))
+      // let new_color_obj = {
+      //   width:this.canvasOriginDataObject.width,
+      //   height:this.canvasOriginDataObject.height,
+      //   data:this.canvasOriginDataObject.data
+      // }
+      function aaa(element, index, array) {
+        return element >= 0;
+      }
+      let new_color_obj = {...this.canvasOriginDataObject}
+      let arr = new_color_obj.data
+      let arr_2 = arr.filter(aaa)
+      let color_array = new this.$Color_class(arr_2)
+      let new_color_array
+      if (new_value === "0") {
+        new_color_array = color_array.get_normal
+      } else if (new_value === "1") {
+        new_color_array = color_array.get_reverse
+      }
+      this.changeCanvasColorFilterFunc(this.canvasObject, new_color_array)
     }
   }
 };
@@ -952,11 +1001,11 @@ function drawArcFunc(x, y, r, arcColorString, arcWidthNumber, arcStrokeColorStri
   ctx.fill()
 }
 // 重绘用 画圆入口
-function drawArcBeforeFunc(pointDataArray, pointActiveIndex){
+function drawArcBeforeFunc(pointDataArray, pointActiveIndex, type){
   const r = _this.arcRNumber
   pointDataArray.forEach((item, index) => {
     let arc_color
-    if (item.type === "polygon") {
+    if (type === "polygon") {
       pointActiveIndex === index ? arc_color = _this.arcMouseNearColorString : arc_color = _this.arcColorString
     } else {
       arc_color = _this.arcColorString
