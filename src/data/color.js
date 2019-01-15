@@ -1,11 +1,11 @@
-export default class color {
+export default class Color {
     constructor(color_array) {
         this.color_array = color_array
-        this.normal = {
-            "red":   this.build(this.normal),
-            "green": this.build(this.normal),
-            "blue":  this.build(this.normal)
-        };
+        // this.normal = {
+        //     "red":   this.build(this.get_normal),
+        //     "green": this.build(this.get_normal),
+        //     "blue":  this.build(this.get_normal)
+        // };
         this.rainbow = {
             "blue":  [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 148, 152, 156, 160, 164, 168, 172, 176, 180, 184, 188, 192, 196, 200, 204, 208, 212, 216, 220, 224, 228, 232, 236, 240, 244, 248, 252, 255, 247, 239, 231, 223, 215, 207, 199, 191, 183, 175, 167, 159, 151, 143, 135, 127, 119, 111, 103, 95, 87, 79, 71, 63, 55, 47, 39, 31, 23, 15, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             "green": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 253, 251, 249, 247, 245, 243, 241, 239, 237, 235, 233, 231, 229, 227, 225, 223, 221, 219, 217, 215, 213, 211, 209, 207, 205, 203, 201, 199, 197, 195, 193, 192, 189, 186, 183, 180, 177, 174, 171, 168, 165, 162, 159, 156, 153, 150, 147, 144, 141, 138, 135, 132, 129, 126, 123, 120, 117, 114, 111, 108, 105, 102, 99, 96, 93, 90, 87, 84, 81, 78, 75, 72, 69, 66, 63, 60, 57, 54, 51, 48, 45, 42, 39, 36, 33, 30, 27, 24, 21, 18, 15, 12, 9, 6, 3],
@@ -52,6 +52,16 @@ export default class color {
     get get_normal(){
         return this.color_array
     }
+    get get_reverse(){
+        let arr = this.color_array
+        let length = arr.length
+        for (let i = 0; i < length; i+=4) {
+            arr[i] = this.reverse(arr[i])
+            arr[i + 1] = this.reverse(arr[i + 1])
+            arr[i + 2] = this.reverse(arr[i + 2])
+        }
+        return arr
+    }
     normal(i)
     {
         return i
@@ -59,16 +69,48 @@ export default class color {
     // 单通道反色
     reverse(i)
     {
+        // console.log(i)
         return (this.range_max - 1) - i;
     }
-    // 全通道反色
-    build (func)
+    toMaxFirstThird(i)
     {
-        var lut = [];
-        for( var i=0; i<this.range_max; ++i ) {
-            lut.push(func(i));
+        var val = i * 3;
+        if( val > this.range_max-1 ) {
+            return this.range_max-1;
         }
-        return lut;
+        return val;
     }
+    toMaxSecondThird(i)
+    {
+        var third = this.range_max/3;
+        var val = 0;
+        if( i >= third ) {
+            val = (i-third) * 3;
+            if( val > this.range_max-1 ) {
+                return this.range_max-1;
+            }
+        }
+        return val;
+    }
+    toMaxThirdThird(i)
+    {
+        var third = this.range_max/3;
+        var val = 0;
+        if( i >= 2*third ) {
+            val = (i-2*third) * 3;
+            if( val > this.range_max-1 ) {
+                return this.range_max-1;
+            }
+        }
+        return val;
+    }  
+    // build (func)
+    // {
+    //     var lut = [];
+    //     for( var i=0; i<this.range_max; ++i ) {
+    //         lut.push(func(i));
+    //     }
+    //     return lut;
+    // }
 }
 

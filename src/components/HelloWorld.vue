@@ -73,9 +73,9 @@ export default {
       baseUrl: "",
       exampleStudyImageIds: [
         'http://localhost/bbmri-53323851.dcm',
-        'http://localhost/bbmri-53323707.dcm',
-        'http://localhost/bbmri-53323851.dcm',
-        'http://localhost/bbmri-53323707.dcm'
+        // 'http://localhost/bbmri-53323707.dcm',
+        // 'http://localhost/bbmri-53323851.dcm',
+        // 'http://localhost/bbmri-53323707.dcm'
       ],
       isInitLoad: true,
       isShow: true,
@@ -110,6 +110,7 @@ export default {
       polygonTransformingMouseStartedCoordinateObject:null,    // 鼠标拉伸多边形 前一次的坐标
       polygonTransformingMouseContinueCoordinateObject:null,    // 鼠标拉伸多边形 现在的坐标
       canvasSizeObject:null,    // 记录现canvas大小的对象
+      polygonLatingAndFormingIsDisconnectedBoolean:false,    // 鼠标拖动或拉伸多边形时与多边形失去连接
       // EDIT END
     };
   },
@@ -228,7 +229,7 @@ export default {
 
       // Mouse
       // cornerstoneTools.wwwc.activate(canvas, 1); // left click
-      // cornerstoneTools.pan.activate(canvas, 2); // middle click
+      cornerstoneTools.pan.activate(canvas, 2); // middle click
       // cornerstoneTools.zoom.activate(canvas, 4); // right click
 
       // Touch / Gesture
@@ -284,6 +285,7 @@ export default {
         width:c.width,
         height:c.height
       }
+      this.repeatGetCanvasDataFunc()
       // this.canvasOriginObject = this.canvasObject
       // console.log(this.canvasObject)
       // console.log(this.$tools.randomString())
@@ -304,6 +306,22 @@ export default {
       //   this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, 526, 526)
       //   console.log(this.canvasOriginDataObject)
       // })
+    },
+    repeatGetCanvasDataFunc(){
+      console.log("repeatGetCanvasDataFunc")
+      const width = this.canvasSizeObject.width, height = this.canvasSizeObject.height
+      this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, width, height)
+      if (this.canvasOriginDataObject.data[3] !== 0) {
+        // const Color = this.$color
+        let color_array = new this.$Color_class(this.canvasObject.getImageData(0, 0, width, height).data)
+        let color_result = color_array.get_reverse
+        console.log(color_result)
+        return
+      } else {
+        setTimeout(()=>{
+          this.repeatGetCanvasDataFunc()
+        },10)
+      }
     },
     submitTestFunc(){
       alert(this.selectValueString)
@@ -339,8 +357,8 @@ export default {
       let pointDataArray = canvasMarkDataObject.pointDataArray
       let centerPointObject = canvasMarkDataObject.centerPointObject
       pointDataArray.forEach((item, index) => {
-        item.x = item.x + 10
-        item.y = item.y + 10
+        item.x = item.x
+        item.y = item.y
       })
       centerPointObject.center_x = centerPointObject.center_x + 10
       centerPointObject.center_y = centerPointObject.center_y + 10
@@ -363,7 +381,7 @@ export default {
     selectValueString:function(new_value, old_value){
       if (new_value === "1" && this.isCanCopyOriginCanvasDataBoolean) {
         this.isCanCopyOriginCanvasDataBoolean = false
-        this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, this.canvasSizeObject.width, this.canvasSizeObject.height)
+        // this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, this.canvasSizeObject.width, this.canvasSizeObject.height)
       }
     }
   }
@@ -391,6 +409,11 @@ function painting() {
         .on("click", ".image-canvas", function(event) {
           console.log("click")
           // console.log(_this.selectValueString)
+          // 如果刚刚处于与多边形失去连接状态
+          if (_this.polygonLatingAndFormingIsDisconnectedBoolean) {
+            _this.polygonLatingAndFormingIsDisconnectedBoolean = false
+            return
+          }
           // 如果处于可移动或者拉伸某多边形状态就不启动绘制函数
           if (_this.isMouseCanTranslatePolygonBoolean || _this.isMouseTranslatingPolygonBoolean || _this.isMouseCanTransformPolygonBoolean || _this.isMouseTransformingPolygonBoolean) {
             return
@@ -497,17 +520,28 @@ function painting() {
                     item.pointActiveIndex = child_index
                     child_point_is_marked = true
                     haveATransformingPolygon = true
+                    // item.transformable
+                    item.transformable = true
+                    // item.centerPointActive = true
                     // 如果鼠标不和任何一个连接点挨着
                   } else if (!haveATransformingPolygon && (child_index === pointDataArray.length - 1)) {
                     _this.isMouseCanTransformPolygonBoolean = false
+                    item.transformable = false
+                    // ???
+                    item.pointActiveIndex = null
                   }                  
                 })
                 // console.log(child_point_is_marked, index)
-                !child_point_is_marked ? item.pointActiveIndex = null : ''
+                // !child_point_is_marked ? item.pointActiveIndex = null : ''
                 // 鼠标现坐标记录 多边形现坐标计算
                 // console.log(_this.isMouseTransformingPolygonBoolean)
                 if (_this.isMouseTransformingPolygonBoolean) {
                   if (item.pointActiveIndex === null) {
+                    // 重设移动和拉伸布尔值
+                    resetLatingAndFormingBooleanFunc()
+                    // 激活重绘
+                    _this.clearTestFunc()
+                    _this.reDrawFunc()
                     return
                   }
                   // 鼠标移动 mouseleave 记录坐标B
@@ -536,6 +570,9 @@ function painting() {
               if (distance < judge_number) {
                 item.pointActiveIndex = null
               }
+              // 重设移动和拉伸布尔值
+              resetLatingAndFormingBooleanFunc()
+              // console.log(_this.isMouseTransformingPolygonBoolean)
               // 激活重绘
               _this.clearTestFunc()
               _this.reDrawFunc()
@@ -586,6 +623,36 @@ function painting() {
           }
         })
 }
+// 把lating和forming布尔值重设为正确的值
+function resetLatingAndFormingBooleanFunc(){
+  // 如果此时所有多边形都不处于移动和拉伸状态
+  const allPolygonIsStatic = allPolygonLateAndFormCheckFunc()
+  // 就 _this.isMouseTranslatingPolygonBoolean _this.isMouseTransformingPolygonBoolean 为 false
+  if (allPolygonIsStatic) {
+    let result = false
+    if (_this.isMouseTranslatingPolygonBoolean) {
+      _this.isMouseTranslatingPolygonBoolean = false
+      result = true
+    }
+    if (_this.isMouseTransformingPolygonBoolean) {
+      _this.isMouseTransformingPolygonBoolean = false
+      result = true
+    }
+    if (result) {
+      // console.log("result")
+      _this.polygonLatingAndFormingIsDisconnectedBoolean = true
+    }                
+  }
+}
+// 如果此时所有多边形都不处于移动和拉伸状态
+function allPolygonLateAndFormCheckFunc () {
+  let result = true
+  _this.canvasMarkDataArray.forEach((item, index, this_arr) => {
+    item.translateable ? result = false : ''
+    item.transformable ? result = false : ''
+  })
+  return result
+}
 // 记录点的函数
 function pointPaintingFunc (event) {
   const r = _this.arcRNumber
@@ -594,7 +661,7 @@ function pointPaintingFunc (event) {
     // canvasMarkDataArray.push(new canvasMarkDataObject)
     // console.log(event)
     const canvasMarkDataObject = {
-      id: _this.$tools.randomString(),
+      id: _this.$Tools.randomString(),
       type:'polygon',
       visible: true,
       active: false,
@@ -762,6 +829,7 @@ function drawArcBeforeFunc(pointDataArray, pointActiveIndex){
   const r = _this.arcRNumber
   pointDataArray.forEach((item, index) => {
     let arc_color
+    // console.log(pointActiveIndex)
     pointActiveIndex === index ? arc_color = _this.arcMouseNearColorString : arc_color = _this.arcColorString
     drawArcFunc(item.x, item.y, r, arc_color, _this.arcWidthNumber, _this.arcStrokeColorString)
   })
@@ -836,8 +904,8 @@ function calcCenterInPolygon(pointDataArray){
   })
   console.log(x_value_arr)
   console.log(y_value_arr)
-  let x_obj = _this.$tools.compareVal(x_value_arr) // x_value_arr.$compareVal()
-  let y_obj = _this.$tools.compareVal(y_value_arr)
+  let x_obj = _this.$Tools.compareVal(x_value_arr) // x_value_arr.$compareVal()
+  let y_obj = _this.$Tools.compareVal(y_value_arr)
   console.log(x_obj, y_obj)
   let center_x = Math.abs(parseInt((x_obj.max + x_obj.min) / 2))
   let center_y = Math.abs(parseInt((y_obj.max + y_obj.min) / 2))

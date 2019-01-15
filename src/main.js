@@ -8,7 +8,9 @@ Vue.config.productionTip = false
 Vue.use(VueResource);
 
 import myUtils from './data/tools'
-Vue.prototype.$tools = myUtils;
+Vue.prototype.$Tools = myUtils;
+import color from './data/color'
+Vue.prototype.$Color_class = color;
 
 import $ from 'jquery' // jquery
 
