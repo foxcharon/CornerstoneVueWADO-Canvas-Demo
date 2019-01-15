@@ -52,6 +52,7 @@ export default class Color {
     get get_normal(){
         return this.color_array
     }
+    // 反色
     get get_reverse(){
         let arr = this.color_array
         let length = arr.length
@@ -59,6 +60,17 @@ export default class Color {
             arr[i] = this.reverse(arr[i])
             arr[i + 1] = this.reverse(arr[i + 1])
             arr[i + 2] = this.reverse(arr[i + 2])
+        }
+        return arr
+    }
+    // 火红
+    get get_hot(){
+        let arr = this.color_array
+        let length = arr.length
+        for (let i = 0; i < length; i+=4) {
+            arr[i] = this.toMaxFirstThird(arr[i])
+            arr[i + 1] = this.toMaxSecondThird(arr[i + 1])
+            arr[i + 2] = this.toMaxThirdThird(arr[i + 2])
         }
         return arr
     }
