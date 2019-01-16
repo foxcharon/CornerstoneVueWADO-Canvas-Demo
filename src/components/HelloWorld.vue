@@ -23,7 +23,7 @@
         </li>
       </ul>
       <button @click="submitTestFunc">selectValueString</button>
-      <button @click="clearTestFunc">clear</button>
+      <button @click="clearAllDataFunc">clear</button>
       <button @click="moveTestFunc">move</button>
       <select v-model="selectColorFilterString">
         <option value="0">正常</option>
@@ -336,6 +336,11 @@ export default {
     submitTestFunc(){
       alert(this.selectValueString)
     },
+    clearAllDataFunc(){
+      this.anotherCanvasMarkDataArray = []
+      this.canvasMarkDataArray = []
+      this.clearTestFunc()
+    },
     clearTestFunc(){
       // console.log("clearTestFunc")
       this.canvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
@@ -356,7 +361,7 @@ export default {
         }
         // console.log(item.completed)
         if (item.completed && item.type === "polygon") {
-          drawPointFunc(item.pointDataArray)
+          this.$Painting_tools.drawPointLineFunc(this.canvasObject, item.pointDataArray, this.lineColorString, this.lineWidthNumber)
           drawCenterArcBeforeFunc(item.centerPointObject, item.centerPointActive)
         }
         // item.centerPointObject === null 不计算中心点
@@ -385,7 +390,7 @@ export default {
       // 复制备用对象
       _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
       // mark_array.forEach((item, index) => {
-      //   drawPointFunc(item.pointDataArray)
+      //   this.$Painting_tools.drawPointLineFunc(_this.canvasObject, item.pointDataArray, _this.lineColorString, _this.lineWidthNumber)
       //   drawArcBeforeFunc(item.pointDataArray)
       // })
     },
@@ -494,19 +499,27 @@ function painting() {
           // console.log(_this.selectValueString)
           // 如果刚刚处于与多边形失去连接状态
           if (_this.polygonLatingAndFormingIsDisconnectedBoolean) {
+            console.log("click1")
             _this.polygonLatingAndFormingIsDisconnectedBoolean = false
             return
           }
           // 如果处于可移动或者拉伸某多边形状态就不启动绘制函数
           if (_this.isMouseCanTranslatePolygonBoolean || _this.isMouseTranslatingPolygonBoolean || _this.isMouseCanTransformPolygonBoolean || _this.isMouseTransformingPolygonBoolean) {
+            console.log("click2")
+            // console.log(_this.isMouseCanTranslatePolygonBoolean)
+            // console.log(_this.isMouseTranslatingPolygonBoolean)
+            // console.log(_this.isMouseCanTransformPolygonBoolean)
+            // console.log(_this.isMouseTransformingPolygonBoolean)
             return
           }
           // 如果不在绘制选项中就不绘制
           if (_this.selectValueString !== "1") {
+            console.log("click3")
             return
           }
           // 多边形
           if (_this.selectValueString === "1") {
+            console.log("click4")
             // alert("???")
             pointPaintingFunc(event)            
           }          
@@ -650,7 +663,7 @@ function painting() {
                   obj_a.x = obj_b.x
                   obj_a.y = obj_b.y
                   // 中心点坐标重设
-                  const new_center = calcCenterInPolygon(item.pointDataArray)
+                  const new_center = _this.$Painting_tools.calcCenterInPolygon(item.pointDataArray, _this.$Tools.compareVal)
                   item.centerPointObject = new_center
                 }
               }
@@ -706,13 +719,13 @@ function painting() {
           // console.log(!_this.isMouseTranslatingPolygonBoolean)
           // console.log(!_this.isMouseTransformingPolygonBoolean)
           // console.log(_this.selectValueString)
-          if (_this.selectValueString === "2" && !_this.isMouseTranslatingPolygonBoolean && !_this.isMouseTransformingPolygonBoolean) {
+          if (_this.selectValueString === "2" && !_this.isMouseTranslatingPolygonBoolean && !_this.isMouseTransformingPolygonBoolean && event.which === 1) {
             // 开始绘制
             // console.log("rectanglePaintingFunc")
             rectanglePaintingFunc(event, 1)
           }
           // 椭圆
-          if (_this.selectValueString === "3" && !_this.isMouseTranslatingPolygonBoolean && !_this.isMouseTransformingPolygonBoolean) {
+          if (_this.selectValueString === "3" && !_this.isMouseTranslatingPolygonBoolean && !_this.isMouseTransformingPolygonBoolean && event.which === 1) {
             // 开始绘制
             ellipsePaintingFunc(event, 1)
           }
@@ -773,6 +786,15 @@ function resetLatingAndFormingBooleanFunc(){
     }                
   }
 }
+//
+function checkCanvasMarkDataArrayFunc(){
+  if (_this.canvasMarkDataArray.length === 0) {
+    _this.isMouseCanTranslatePolygonBoolean = false
+    _this.isMouseTranslatingPolygonBoolean = false
+    _this.isMouseCanTransformPolygonBoolean = false
+    _this.isMouseTransformingPolygonBoolean = false
+  }
+}
 // 如果此时所有多边形都不处于移动和拉伸状态
 function allPolygonLateAndFormCheckFunc () {
   let result = true
@@ -789,36 +811,38 @@ function ellipsePaintingFunc (event, type) {
   if (type === 1) {
     _this.isPaintedBoolean = false
     _this.isEllipsePaintingBoolean = true
-    const canvasMarkDataObject = {
-      id: _this.$Tools.randomString(),
-      type:'ellipse',   // 椭圆
-      visible: true,
-      active: false,
-      color: undefined,
-      completed:false,    // 是否已完成绘制
-      centerPointActive:false,    // 是否激活中心点（可以移动多边形）
-      translateable:false,    // 是否在移动
-      transformable:false,    // 是否在拉伸
-      // 中心点坐标
-      // 椭圆的中心点会在一开始就记录
-      centerPointObject:{
-        center_x:event.offsetX,
-        center_y:event.offsetY
-      },      
-      pointActiveIndex:null,    // 此时激活了多边形的哪个连接点（一个时刻只会有一个）
-      // 椭圆只有一个控制点
-      // type1 时椭圆没有控制点 type2 时才有
-      pointDataArray: [
-        {
-          x: null,
-          y: null
-        },
-        {
-          x: null,
-          y: null
-        }
-      ]
-    }
+    // const canvasMarkDataObject = {
+    //   id: _this.$Tools.randomString(),
+    //   type:'ellipse',   // 椭圆
+    //   visible: true,
+    //   active: false,
+    //   color: undefined,
+    //   completed:false,    // 是否已完成绘制
+    //   centerPointActive:false,    // 是否激活中心点（可以移动多边形）
+    //   translateable:false,    // 是否在移动
+    //   transformable:false,    // 是否在拉伸
+    //   // 中心点坐标
+    //   // 椭圆的中心点会在一开始就记录
+    //   centerPointObject:{
+    //     center_x:event.offsetX,
+    //     center_y:event.offsetY
+    //   },      
+    //   pointActiveIndex:null,    // 此时激活了多边形的哪个连接点（一个时刻只会有一个）
+    //   // 椭圆只有一个控制点
+    //   // type1 时椭圆没有控制点 type2 时才有
+    //   pointDataArray: [
+    //     {
+    //       x: event.offsetX,
+    //       y: event.offsetY
+    //     },
+    //     {
+    //       x: event.offsetX,
+    //       y: event.offsetY
+    //     }
+    //   ]
+    // }
+    // 把数据对象放进实体类
+    const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'ellipse', event.offsetX, event.offsetY)
     _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
   } else if (type === 2) {
     // console.log("???")
@@ -858,29 +882,31 @@ function rectanglePaintingFunc (event, type) {
   if (type === 1) {
     _this.isPaintedBoolean = false
     _this.isRectPaintingBoolean = true
-    const canvasMarkDataObject = {
-      id: _this.$Tools.randomString(),
-      type:'rectangle',   // 矩形
-      visible: true,
-      active: false,
-      color: undefined,
-      completed:false,    // 是否已完成绘制
-      centerPointActive:false,    // 是否激活中心点（可以移动多边形）
-      translateable:false,    // 是否在移动
-      transformable:false,    // 是否在拉伸
-      centerPointObject:null,    // 中心点坐标
-      pointActiveIndex:null,    // 此时激活了多边形的哪个连接点（一个时刻只会有一个）
-      pointDataArray: [
-        {
-          x: event.offsetX,
-          y: event.offsetY
-        },
-        {
-          x: event.offsetX,
-          y: event.offsetY
-        }
-      ]    // point_0 左上角点 point_1 右下角点 
-    }
+    // const canvasMarkDataObject = {
+    //   id: _this.$Tools.randomString(),
+    //   type:'rectangle',   // 矩形
+    //   visible: true,
+    //   active: false,
+    //   color: undefined,
+    //   completed:false,    // 是否已完成绘制
+    //   centerPointActive:false,    // 是否激活中心点（可以移动多边形）
+    //   translateable:false,    // 是否在移动
+    //   transformable:false,    // 是否在拉伸
+    //   centerPointObject:null,    // 中心点坐标
+    //   pointActiveIndex:null,    // 此时激活了多边形的哪个连接点（一个时刻只会有一个）
+    //   pointDataArray: [
+    //     {
+    //       x: event.offsetX,
+    //       y: event.offsetY
+    //     },
+    //     {
+    //       x: event.offsetX,
+    //       y: event.offsetY
+    //     }
+    //   ]    // point_0 左上角点 point_1 右下角点 
+    // }
+    // 把数据对象放进实体类
+    const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'rectangle', event.offsetX, event.offsetY)
     _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
   } else if (type === 2) {
     // 拖动时重设右下角点的值
@@ -898,7 +924,7 @@ function rectanglePaintingFunc (event, type) {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     canvasMarkDataObject.completed = true
     // 记录中心点
-    canvasMarkDataObject.centerPointObject = calcCenterInPolygon(canvasMarkDataObject.pointDataArray)
+    canvasMarkDataObject.centerPointObject = _this.$Painting_tools.calcCenterInPolygon(canvasMarkDataObject.pointDataArray, _this.$Tools.compareVal)
     _this.isPaintedBoolean = true
     _this.isRectPaintingBoolean = false
     // 重绘
@@ -914,31 +940,34 @@ function pointPaintingFunc (event) {
     // alert("???")
     // canvasMarkDataArray.push(new canvasMarkDataObject)
     // console.log(event)
-    const canvasMarkDataObject = {
-      id: _this.$Tools.randomString(),
-      type:'polygon',   // 多边形
-      visible: true,
-      active: false,
-      color: undefined,
-      completed:false,    // 是否已完成绘制
-      centerPointActive:false,    // 是否激活中心点（可以移动多边形）
-      translateable:false,    // 是否在移动
-      transformable:false,    // 是否在拉伸
-      centerPointObject:null,    // 中心点坐标
-      pointActiveIndex:null,    // 此时激活了多边形的哪个连接点（一个时刻只会有一个）
-      pointDataArray: [
-        {
-          x: event.offsetX,
-          y: event.offsetY
-        }
-      ]     
-    }
+    // const canvasMarkDataObject = {
+    //   id: _this.$Tools.randomString(),
+    //   type:'polygon',   // 多边形
+    //   visible: true,
+    //   active: false,
+    //   color: undefined,
+    //   completed:false,    // 是否已完成绘制
+    //   centerPointActive:false,    // 是否激活中心点（可以移动多边形）
+    //   translateable:false,    // 是否在移动
+    //   transformable:false,    // 是否在拉伸
+    //   centerPointObject:null,    // 中心点坐标
+    //   pointActiveIndex:null,    // 此时激活了多边形的哪个连接点（一个时刻只会有一个）
+    //   pointDataArray: [
+    //     {
+    //       x: event.offsetX,
+    //       y: event.offsetY
+    //     }
+    //   ]     
+    // }
+    // 把数据对象放进实体类
+    const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'polygon', event.offsetX, event.offsetY)
     _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
     // console.log(_this.canvasMarkDataArray)
     // console.log(_this.canvasMarkDataArray.length - 1)
     // console.log(canvasMarkDataObject)
     _this.isPointingBoolean = true    
-    drawArcFunc(event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
+    _this.$Painting_tools.drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
+    // drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
   } else {
     // canvasMarkDataObject.push(new pointDataArray)      
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
@@ -951,14 +980,15 @@ function pointPaintingFunc (event) {
       prevX = prevY = null
     }    
     // 检测这一点是否和上一点过近，过近就启动完成判定  
-    if (checkPointAndPointIsNearFunc(event.offsetX, event.offsetY, prevX, prevY)) {
+    if (_this.$Painting_tools.checkPointAndPointIsNearFunc(event.offsetX, event.offsetY, prevX, prevY, _this.sqrtStandandNumber)) {
       settlePointFunc(pointDataArray.length)
     } else {
       _this.$set(pointDataArray, 
         pointDataArray.length, 
         {x: event.offsetX, y: event.offsetY})
       _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
-      drawArcFunc(event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
+      _this.$Painting_tools.drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
+      // drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
     }       
   }
 }
@@ -1017,6 +1047,9 @@ function pointDeleteFunc (event) {
       }
       if (confirm("确定删除这个多边形？")) {
         _this.$delete(_this.canvasMarkDataArray, catch_index)
+        if (_this.canvasMarkDataArray.length === 0) {
+          checkCanvasMarkDataArrayFunc()
+        }
       }
     }
   }    
@@ -1033,6 +1066,7 @@ function centerPointDeleteFunc (item, index, x, y) {
   // 横向距离  纵向距离
   // const hori = center_x - x, vert = center_y - y
   // const distance = Math.sqrt(hori*hori + vert*vert)
+  // 下一个就提你
   let distance = calcPointDistanceFunc(x, y, center_x, center_y)
   const judge_number = _this.centerPointHoverJudgeNumber
   if (distance < judge_number) {
@@ -1053,21 +1087,21 @@ function deletePointBecauseDblclickFunc(){
   _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
 }
 // 绘制线函数
-function drawPointFunc (pointDataArray) {
-  let ctx = _this.canvasObject  
-  ctx.beginPath();
-  pointDataArray.forEach((item, index)=>{
-    if (index === 0) {
-      ctx.moveTo(item.x, item.y)
-    } else {
-      ctx.lineTo(item.x, item.y)
-    }
-  })
-  ctx.strokeStyle = _this.lineColorString;
-  ctx.lineWidth = _this.lineWidthNumber;
-  ctx.closePath();
-  ctx.stroke()
-}
+// function drawPointLineFunc (canvas, pointDataArray, lineColorString, lineWidthNumber) {
+//   let ctx = canvas 
+//   ctx.beginPath();
+//   pointDataArray.forEach((item, index)=>{
+//     if (index === 0) {
+//       ctx.moveTo(item.x, item.y)
+//     } else {
+//       ctx.lineTo(item.x, item.y)
+//     }
+//   })
+//   ctx.strokeStyle = lineColorString;
+//   ctx.lineWidth = lineWidthNumber;
+//   ctx.closePath();
+//   ctx.stroke()
+// }
 // 画椭圆入口
 // item: canvasMarkDataObject
 // x为椭圆中心横坐标，y为椭圆中心纵坐标，a为椭圆横半轴长，b为椭圆纵半轴长。
@@ -1076,72 +1110,80 @@ function drawEllipseBeforeFunc(item){
     y = item.centerPointObject.center_y,
     a = item.pointDataArray[0].x - item.centerPointObject.center_x, // 控制点坐标 - 中心点坐标
     b = item.pointDataArray[0].y - item.centerPointObject.center_y;
-  drawEllipseFunc(x, y, a, b, "red", 1, "red")
+  // drawEllipseFunc(_this.canvasObject, x, y, a, b, "red", 1, "red")
+  _this.$Painting_tools.drawEllipseFunc(_this.canvasObject, x, y, a, b, "red", 1, "red")
 }
 // 画矩形入口
 function drawRectBeforeFunc(item){
   // _this.canvasMarkDataArray.forEach((item, index) => {
     // if (item.type === "rectangle") {
-      drawRectFunc(item.pointDataArray[0].x, item.pointDataArray[0].y, item.pointDataArray[1].x, item.pointDataArray[1].y, "red", 1, "red")
+      const x0 = item.pointDataArray[0].x,
+        y0 = item.pointDataArray[0].y,
+        x1 = item.pointDataArray[1].x,
+        y1 = item.pointDataArray[1].y;
+      _this.$Painting_tools.drawRectFunc(_this.canvasObject, x0, y0, x1, y1, "red", 1, "red")
+      // drawRectFunc(_this.canvasObject, item.pointDataArray[0].x, item.pointDataArray[0].y, item.pointDataArray[1].x, item.pointDataArray[1].y, "red", 1, "red")
     // }
   // })
 }
 // 绘制椭圆函数
 //---------使用三次贝塞尔曲线模拟椭圆2
-function drawEllipseFunc(x, y, a, b, rectFillColorString, rectWidthNumber, rectStrokeColorString){
-  let ctx = _this.canvasObject
-  let k = .5522848,
-  ox = a * k, // 水平控制点偏移量
-  oy = b * k; // 垂直控制点偏移量
+// function drawEllipseFunc(canvas, x, y, a, b, rectFillColorString, rectWidthNumber, rectStrokeColorString){
+//   let ctx = canvas
+//   let k = .5522848,
+//   ox = a * k, // 水平控制点偏移量
+//   oy = b * k; // 垂直控制点偏移量
 
-  ctx.beginPath();
-  ctx.lineWidth = rectWidthNumber;
-  ctx.strokeStyle = rectStrokeColorString;
-  //从椭圆的左端点开始顺时针绘制四条三次贝塞尔曲线
-  ctx.moveTo(x - a, y);
-  ctx.bezierCurveTo(x - a, y - oy, x - ox, y - b, x, y - b);
-  ctx.bezierCurveTo(x + ox, y - b, x + a, y - oy, x + a, y);
-  ctx.bezierCurveTo(x + a, y + oy, x + ox, y + b, x, y + b);
-  ctx.bezierCurveTo(x - ox, y + b, x - a, y + oy, x - a, y);
-  ctx.closePath();
-  ctx.stroke();
-}
+//   ctx.beginPath();
+//   ctx.lineWidth = rectWidthNumber;
+//   ctx.strokeStyle = rectStrokeColorString;
+//   //从椭圆的左端点开始顺时针绘制四条三次贝塞尔曲线
+//   ctx.moveTo(x - a, y);
+//   ctx.bezierCurveTo(x - a, y - oy, x - ox, y - b, x, y - b);
+//   ctx.bezierCurveTo(x + ox, y - b, x + a, y - oy, x + a, y);
+//   ctx.bezierCurveTo(x + a, y + oy, x + ox, y + b, x, y + b);
+//   ctx.bezierCurveTo(x - ox, y + b, x - a, y + oy, x - a, y);
+//   ctx.closePath();
+//   ctx.stroke();
+// }
 // 绘制矩形函数
 // x0, y0 起始点 x1, y1 当前点
-function drawRectFunc(x0, y0, x1, y1, rectFillColorString, rectWidthNumber, rectStrokeColorString){
-  let ctx = _this.canvasObject
-  let point_0_size = Math.sqrt(x0*x0 + y0*y0)
-  let point_1_size = Math.sqrt(x1*x1 + y1*y1)
-  let width = Math.round(Math.abs(x1 - x0))
-  let height = Math.round(Math.abs(y1 - y0))
-  ctx.strokeStyle = _this.lineColorString
-  // 正向画与逆向画
-  let x, y
-  if (point_1_size > point_0_size) {
-    x = x0, y = y0
-  } else {
-    x = x1, y = y1
-  }
-  ctx.beginPath();
-  // ctx.fillStyle = rectFillColorString;
-  ctx.lineWidth = rectWidthNumber;
-  ctx.strokeStyle = rectStrokeColorString;
-  ctx.rect(x, y, width, height)
-  ctx.closePath();
-  ctx.stroke()
-}
+// function drawRectFunc(canvas, x0, y0, x1, y1, rectFillColorString, rectWidthNumber, rectStrokeColorString){
+//   let ctx = canvas
+//   let point_0_size = Math.sqrt(x0*x0 + y0*y0)
+//   let point_1_size = Math.sqrt(x1*x1 + y1*y1)
+//   let width = Math.round(Math.abs(x1 - x0))
+//   let height = Math.round(Math.abs(y1 - y0))
+//   // ctx.strokeStyle = _this.lineColorString
+//   // 正向画与逆向画
+//   let x, y
+//   if (point_1_size > point_0_size) {
+//     x = x0, y = y0
+//   } else {
+//     x = x1, y = y1
+//   }
+//   x = x + 0.5
+//   y = y + 0.5
+//   ctx.beginPath();
+//   // ctx.fillStyle = rectFillColorString;
+//   ctx.lineWidth = rectWidthNumber;
+//   ctx.strokeStyle = rectStrokeColorString;
+//   ctx.rect(x, y, width, height)
+//   ctx.closePath();
+//   ctx.stroke()
+// }
 // 绘制标记圆函数
-function drawArcFunc(x, y, r, arcColorString, arcWidthNumber, arcStrokeColorString){
-  let ctx = _this.canvasObject  
-  ctx.beginPath();
-  ctx.fillStyle = arcColorString;
-  ctx.lineWidth = arcWidthNumber;
-  ctx.strokeStyle = arcStrokeColorString;
-  ctx.arc(x, y, r, 0, 2*Math.PI);  
-  ctx.closePath();
-  ctx.stroke()
-  ctx.fill()
-}
+// function drawArcFunc(canvas, x, y, r, arcColorString, arcWidthNumber, arcStrokeColorString){
+//   let ctx = canvas  
+//   ctx.beginPath();
+//   ctx.fillStyle = arcColorString;
+//   ctx.lineWidth = arcWidthNumber;
+//   ctx.strokeStyle = arcStrokeColorString;
+//   ctx.arc(x, y, r, 0, 2*Math.PI);  
+//   ctx.closePath();
+//   ctx.stroke()
+//   ctx.fill()
+// }
 // 重绘用 画圆入口
 function drawArcBeforeFunc(pointDataArray, pointActiveIndex, type){
   const r = _this.arcRNumber
@@ -1152,8 +1194,9 @@ function drawArcBeforeFunc(pointDataArray, pointActiveIndex, type){
       pointActiveIndex === index ? arc_color = _this.arcMouseNearColorString : arc_color = _this.arcColorString
     } else {
       arc_color = _this.arcColorString
-    }    
-    drawArcFunc(item.x, item.y, r, arc_color, _this.arcWidthNumber, _this.arcStrokeColorString)
+    }
+    _this.$Painting_tools.drawArcFunc(_this.canvasObject, item.x, item.y, r, arc_color, _this.arcWidthNumber, _this.arcStrokeColorString)    
+    // drawArcFunc(_this.canvasObject, item.x, item.y, r, arc_color, _this.arcWidthNumber, _this.arcStrokeColorString)
   })
 }
 // 重绘用 画中心点-圆入口
@@ -1162,23 +1205,24 @@ function drawCenterArcBeforeFunc(centerPointObject, centerAcitveBoolean){
   // console.log(centerAcitveBoolean)
   let arc_color
   centerAcitveBoolean ? arc_color = _this.centerArcMouseNearColorString : arc_color = _this.arcColorString
-  drawArcFunc(centerPointObject.center_x, centerPointObject.center_y, _this.arcRNumber, arc_color, _this.arcWidthNumber, _this.centerArcStrokeColorString)
+  _this.$Painting_tools.drawArcFunc(_this.canvasObject, centerPointObject.center_x, centerPointObject.center_y, _this.arcRNumber, arc_color, _this.arcWidthNumber, _this.centerArcStrokeColorString)
+  // drawArcFunc(_this.canvasObject, centerPointObject.center_x, centerPointObject.center_y, _this.arcRNumber, arc_color, _this.arcWidthNumber, _this.centerArcStrokeColorString)
 }
 // 检查两点是否过近
-function checkPointAndPointIsNearFunc (x, y, p_x, p_y) {
-  const standand = _this.sqrtStandandNumber
-  if (!p_x || !p_y) {
-    return false
-  }
-  let across = Math.abs(x - p_x)
-  let release = Math.abs(y - p_y)
-  let distance = Math.sqrt(across*across + release*release)
-  if (distance < standand) {
-    return true
-  } else {
-    return false
-  }
-}
+// function checkPointAndPointIsNearFunc (x, y, p_x, p_y, standand) {
+//   // const standand = standand
+//   if (!p_x || !p_y) {
+//     return false
+//   }
+//   let across = Math.abs(x - p_x)
+//   let release = Math.abs(y - p_y)
+//   let distance = Math.sqrt(across*across + release*release)
+//   if (distance < standand) {
+//     return true
+//   } else {
+//     return false
+//   }
+// }
 // 结算入口，如果可以结算就绘制
 function settlePointFunc (length) {
   const min = _this.minPointNumNumber
@@ -1189,7 +1233,7 @@ function settlePointFunc (length) {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     let pointDataArray = canvasMarkDataObject.pointDataArray
     try {
-      drawPointFunc(pointDataArray)
+      _this.$Painting_tools.drawPointLineFunc(_this.canvasObject, pointDataArray, _this.lineColorString, _this.lineWidthNumber)
       drawCenterArcFunc(pointDataArray, canvasMarkDataObject)
       // 复制备用对象
       _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
@@ -1203,13 +1247,14 @@ function settlePointFunc (length) {
 }
 // 绘制多边形中心点
 function drawCenterArcFunc(pointDataArray, canvasMarkDataObject){
-  let obj = calcCenterInPolygon(pointDataArray)
+  let obj = _this.$Painting_tools.calcCenterInPolygon(pointDataArray, _this.$Tools.compareVal)
   canvasMarkDataObject.centerPointObject = obj    // 把中心点坐标放进多边形对象
   // console.log(obj)
   const r = _this.arcRNumber
   let arc_color = _this.arcColorString  
   let ctx = _this.canvasObject
-  drawArcFunc(obj.center_x, obj.center_y, r, arc_color, _this.arcWidthNumber, _this.centerArcStrokeColorString)
+  _this.$Painting_tools.drawArcFunc(_this.canvasObject, obj.center_x, obj.center_y, r, arc_color, _this.arcWidthNumber, _this.centerArcStrokeColorString)
+  // drawArcFunc(_this.canvasObject, obj.center_x, obj.center_y, r, arc_color, _this.arcWidthNumber, _this.centerArcStrokeColorString)
   // ctx.fillStyle = _this.arcColorString;
   // ctx.lineWidth = _this.arcWidthNumber;
   // ctx.strokeStyle = _this.centerArcStrokeColorString;
@@ -1220,27 +1265,29 @@ function drawCenterArcFunc(pointDataArray, canvasMarkDataObject){
   // ctx.fill()
 }
 // 计算多边形中心点坐标
-function calcCenterInPolygon(pointDataArray){
-  let x_value_arr = [], y_value_arr = []
-  pointDataArray.forEach((item, index) => {
-    x_value_arr.push(item.x)
-    y_value_arr.push(item.y)
-  })
-  // console.log(x_value_arr)
-  // console.log(y_value_arr)
-  let x_obj = _this.$Tools.compareVal(x_value_arr)
-  let y_obj = _this.$Tools.compareVal(y_value_arr)
-  // console.log(x_obj, y_obj)
-  let center_x = Math.abs(parseInt((x_obj.max + x_obj.min) / 2))
-  let center_y = Math.abs(parseInt((y_obj.max + y_obj.min) / 2))
-  return {center_x, center_y}
-  // let x_max_point_obj = pointDataArray[x_obj.max_index]
-  // let x_min_point_obj = pointDataArray[x_obj.min_index]
-  // let y_max_point_obj = pointDataArray[y_obj.max_index]
-  // let y_min_point_obj = pointDataArray[y_obj.min_index]
-  // console.log(x_max_point_obj, x_min_point_obj, y_max_point_obj, y_min_point_obj)
-}
-var aaaaaaa = 1;
+// function calcCenterInPolygon(pointDataArray, func){
+//   let x_value_arr = [], y_value_arr = []
+//   pointDataArray.forEach((item, index) => {
+//     x_value_arr.push(item.x)
+//     y_value_arr.push(item.y)
+//   })
+//   // console.log(x_value_arr)
+//   // console.log(y_value_arr)
+//   let x_obj = func(x_value_arr)
+//   // let x_obj = _this.$Tools.compareVal(x_value_arr)
+//   let y_obj = func(y_value_arr)
+//   // let y_obj = _this.$Tools.compareVal(y_value_arr)
+//   // console.log(x_obj, y_obj)
+//   let center_x = Math.abs(parseInt((x_obj.max + x_obj.min) / 2))
+//   let center_y = Math.abs(parseInt((y_obj.max + y_obj.min) / 2))
+//   return {center_x, center_y}
+//   // let x_max_point_obj = pointDataArray[x_obj.max_index]
+//   // let x_min_point_obj = pointDataArray[x_obj.min_index]
+//   // let y_max_point_obj = pointDataArray[y_obj.max_index]
+//   // let y_min_point_obj = pointDataArray[y_obj.min_index]
+//   // console.log(x_max_point_obj, x_min_point_obj, y_max_point_obj, y_min_point_obj)
+// }
+// var aaaaaaa = 1;
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
