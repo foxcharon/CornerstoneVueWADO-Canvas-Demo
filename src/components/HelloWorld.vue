@@ -547,7 +547,7 @@ function painting() {
               // let vert = y_ed - y    // 纵向距离
               // 中心点与鼠标的距离
               // let distance = Math.sqrt(hori*hori + vert*vert)
-              const distance = calcPointDistanceFunc(x, y, x_ed, y_ed)              
+              const distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, x_ed, y_ed)              
               if (distance < judge_number) {
                 item.translateable = true
                 item.centerPointActive = true
@@ -613,7 +613,7 @@ function painting() {
                   const point_x = child_item.x, point_y = child_item.y
                   // const child_hori = point_x - x, child_vert = point_y - y
                   // const child_distance = Math.sqrt(child_hori*child_hori + child_vert*child_vert)
-                  const child_distance = calcPointDistanceFunc(x, y, point_x, point_y)
+                  const child_distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, point_x, point_y)
                   // console.log(child_distance)
                   if (child_distance < child_judge_number) {
                     item.pointActiveIndex = child_index
@@ -680,6 +680,7 @@ function painting() {
             })
           }
           // 矩形绘制
+          // _this.selectValueString 模式选项 1 多边形 2 矩形 3 椭圆
           // console.log(!_this.isPaintedBoolean)
           if (_this.isRectPaintingBoolean && _this.selectValueString === "2") {            
             rectanglePaintingFunc(event, 2)            
@@ -757,14 +758,14 @@ function painting() {
 }
 // 计算两点距离公共方法
 // x0 y0 鼠标此时的坐标 x1 y1 参照点的坐标
-function calcPointDistanceFunc(x0, y0, x1, y1){
-  if (x1 === -999999 || y1 === -999999) {
-    return 999999
-  }
-  let hori = x1 - x0    // 横向距离
-  let vert = y1 - y0    // 纵向距离
-  return Math.sqrt(hori*hori + vert*vert)
-}
+// function calcPointDistanceFunc(x0, y0, x1, y1){
+//   if (x1 === -999999 || y1 === -999999) {
+//     return 999999
+//   }
+//   let hori = x1 - x0    // 横向距离
+//   let vert = y1 - y0    // 纵向距离
+//   return Math.sqrt(hori*hori + vert*vert)
+// }
 // 把lating和forming布尔值重设为正确的值
 function resetLatingAndFormingBooleanFunc(){
   // 如果此时所有多边形都不处于移动和拉伸状态
@@ -1018,7 +1019,7 @@ function pointDeleteFunc (event) {
         // let vert = point_y - y    // 纵向距离
         // 连接点与鼠标的距离
         // let distance = Math.sqrt(hori*hori + vert*vert)
-        let distance = calcPointDistanceFunc(x, y, point_x, point_y)
+        let distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, point_x, point_y)
         let judge_number = _this.arcRNumber + _this.arcWidthNumber - 1  // 5
         // 只有没画完的点才能删除
         if (distance < judge_number && !item.completed) {
@@ -1067,7 +1068,7 @@ function centerPointDeleteFunc (item, index, x, y) {
   // const hori = center_x - x, vert = center_y - y
   // const distance = Math.sqrt(hori*hori + vert*vert)
   // 下一个就提你
-  let distance = calcPointDistanceFunc(x, y, center_x, center_y)
+  let distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, center_x, center_y)
   const judge_number = _this.centerPointHoverJudgeNumber
   if (distance < judge_number) {
     return true

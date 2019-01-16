@@ -128,5 +128,18 @@ export default class Painting {
             return false
         }
     }
+    /**
+     * 计算两点距离公共方法
+     * @param x0 y0 鼠标此时的坐标 x1 y1 参照点的坐标
+     * @returns {Boolean}
+     */
+    static calcPointDistanceFunc(x0, y0, x1, y1){
+        if (x1 === -999999 || y1 === -999999) {
+            return 999999
+        }
+        let hori = x1 - x0    // 横向距离
+        let vert = y1 - y0    // 纵向距离
+        return Math.sqrt(hori*hori + vert*vert)
+    }
 }
 
