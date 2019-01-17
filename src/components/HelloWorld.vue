@@ -88,8 +88,8 @@ export default {
       // EDIT ===>>> 20190109
       canvasObject:null,    // CanvasRenderingContext2D
       canvasOriginDataObject:null,   // CanvasRenderingContext2D-imgdata-origin
-      canvasMarkDataArray:[],    // 记录canvas标注数据的数组
-      anotherCanvasMarkDataArray:[],    // 记录canvas标注数据的数组
+      canvasMarkDataArray:[],    // 记录canvas标注数据的数组 视图模型
+      anotherCanvasMarkDataArray:[],    // 记录canvas标注数据的数组 数据模型
       selectValueString:"0",    // 选择模式
       selectColorFilterString:"0",    // 选择滤镜 0 为正常
       isPointingBoolean:false,    // 是否正在绘制
@@ -388,7 +388,7 @@ export default {
         }
       })
       // 复制备用对象
-      _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
+      // _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
       // mark_array.forEach((item, index) => {
       //   this.$Painting_tools.drawPointLineFunc(_this.canvasObject, item.pointDataArray, _this.lineColorString, _this.lineWidthNumber)
       //   drawArcBeforeFunc(item.pointDataArray)
@@ -530,7 +530,8 @@ function painting() {
         .on("mousemove", ".image-canvas", function(event) {
           // 移动 拉伸
           if (_this.isPaintedBoolean) {
-            let x = event.offsetX, y = event.offsetY
+            const x = event.offsetX, 
+              y = event.offsetY;
             const judge_number = _this.centerPointHoverJudgeNumber
             let reDrawStatusBoolean = true
             let haveATranslatePolygon = false
@@ -541,16 +542,18 @@ function painting() {
                 return
               }
               // 计算中心点
-              let x_ed = item.centerPointObject ? item.centerPointObject.center_x : -999999
-              let y_ed = item.centerPointObject ? item.centerPointObject.center_y : -999999
+              const x_ed = item.centerPointObject ? item.centerPointObject.center_x : -999999
+              const y_ed = item.centerPointObject ? item.centerPointObject.center_y : -999999
               // let hori = x_ed - x    // 横向距离
               // let vert = y_ed - y    // 纵向距离
               // 中心点与鼠标的距离
               // let distance = Math.sqrt(hori*hori + vert*vert)
               const distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, x_ed, y_ed)              
               if (distance < judge_number) {
-                item.translateable = true
-                item.centerPointActive = true
+                // item.translateable = true
+                // item.centerPointActive = true
+                setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "translateable", true)
+                setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "centerPointActive", true)
                 _this.canTranslatePolygonIndex = index
                 _this.isMouseCanTranslatePolygonBoolean = true
                 haveATranslatePolygon = true
@@ -572,12 +575,20 @@ function painting() {
                     let coor_x_distance = obj_b.x - obj_a.x
                     let coor_y_distance = obj_b.y - obj_a.y
                     // 中心点重新赋值
-                    item.centerPointObject.center_x = item.centerPointObject.center_x + coor_x_distance
-                    item.centerPointObject.center_y = item.centerPointObject.center_y + coor_y_distance
+                    // item.centerPointObject.center_x = item.centerPointObject.center_x + coor_x_distance
+                    // item.centerPointObject.center_y = item.centerPointObject.center_y + coor_y_distance
+                    setCoreObjectArray(item, "canvasMarkDataObject", "update", 0, "centerPointObject", {
+                      center_x:item.centerPointObject.center_x + coor_x_distance,
+                      center_y:item.centerPointObject.center_y + coor_y_distance
+                    })
                     // 多边形坐标点重新赋值
-                    item.pointDataArray.forEach((child_item, child_index)=>{
-                      child_item.x = child_item.x + coor_x_distance
-                      child_item.y = child_item.y + coor_y_distance
+                    item.pointDataArray.forEach((child_item, child_index, this_arr)=>{
+                      // child_item.x = child_item.x + coor_x_distance
+                      // child_item.y = child_item.y + coor_y_distance
+                      setCoreObjectArray(this_arr, "pointDataArray", "update", child_index, null, {
+                        x:child_item.x + coor_x_distance,
+                        y:child_item.y + coor_y_distance
+                      })
                     })
                     // 修正polygonMovingMouseStartedCoordinateObject，保证下一次移动正常
                     obj_a.x = obj_b.x
@@ -595,8 +606,10 @@ function painting() {
                   _this.canTranslatePolygonIndex = -1
                   _this.isMouseCanTranslatePolygonBoolean = false
                 }
-                item.translateable = false
-                item.centerPointActive = false
+                // item.translateable = false
+                // item.centerPointActive = false
+                setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "translateable", false)
+                setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "centerPointActive", false)
                 // 激活重绘
                 // _this.clearTestFunc()
                 // _this.reDrawFunc()
@@ -608,7 +621,7 @@ function painting() {
                 let child_point_is_marked = false
                 _this.isMouseCanTransformPolygonBoolean = true
                 // console.log(_this.isMouseCanTransformPolygonBoolean)
-                pointDataArray.forEach((child_item, child_index) => {
+                pointDataArray.forEach((child_item, child_index, this_arr) => {
                   // x y 是鼠标此时的点 连接点需要别的标识符
                   const point_x = child_item.x, point_y = child_item.y
                   // const child_hori = point_x - x, child_vert = point_y - y
@@ -616,19 +629,24 @@ function painting() {
                   const child_distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, point_x, point_y)
                   // console.log(child_distance)
                   if (child_distance < child_judge_number) {
-                    item.pointActiveIndex = child_index
+                    // item.pointActiveIndex = child_index
+                    setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "pointActiveIndex", child_index)
                     child_point_is_marked = true
                     haveATransformingPolygon = true
                     // item.transformable
-                    item.transformable = true
+                    // item.transformable = true
+                    setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "transformable", true)
                     // item.centerPointActive = true
                     // 如果鼠标不和任何一个连接点挨着
                     // console.log(item.pointActiveIndex)
                   } else if (!haveATransformingPolygon && (child_index === pointDataArray.length - 1)) {
                     _this.isMouseCanTransformPolygonBoolean = false
-                    item.transformable = false
+                    // item.transformable = false
                     // ???
-                    item.pointActiveIndex = null
+                    // item.pointActiveIndex = null
+
+                    setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "transformable", false)
+                    setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "pointActiveIndex", null)
                   }                  
                 })
                 // console.log(child_point_is_marked, index)
@@ -657,19 +675,25 @@ function painting() {
                   let coor_y_distance = obj_b.y - obj_a.y
                   // 把新点坐标注入到对象中
                   let transform_coor_obj = item.pointDataArray[item.pointActiveIndex]
-                  transform_coor_obj.x = transform_coor_obj.x + coor_x_distance
-                  transform_coor_obj.y = transform_coor_obj.y + coor_y_distance                                  
+                  // transform_coor_obj.x = transform_coor_obj.x + coor_x_distance
+                  // transform_coor_obj.y = transform_coor_obj.y + coor_y_distance
+                  setCoreObjectArray(item.pointDataArray, "pointDataArray", "update", item.pointActiveIndex, null, {
+                    x:transform_coor_obj.x + coor_x_distance,
+                    y:transform_coor_obj.y + coor_y_distance
+                  })
                   // 修正
                   obj_a.x = obj_b.x
                   obj_a.y = obj_b.y
                   // 中心点坐标重设
                   const new_center = _this.$Painting_tools.calcCenterInPolygon(item.pointDataArray, _this.$Tools.compareVal)
                   item.centerPointObject = new_center
+                  setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "centerPointObject", new_center)
                 }
               }
               // 如果找中心点，就不点亮连接点
               if (distance < judge_number) {
                 item.pointActiveIndex = null
+                setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "pointActiveIndex", null)
               }
               // 重设移动和拉伸布尔值
               resetLatingAndFormingBooleanFunc()
@@ -787,7 +811,7 @@ function resetLatingAndFormingBooleanFunc(){
     }                
   }
 }
-//
+// 如果没有任何图形就重置状态
 function checkCanvasMarkDataArrayFunc(){
   if (_this.canvasMarkDataArray.length === 0) {
     _this.isMouseCanTranslatePolygonBoolean = false
@@ -844,20 +868,29 @@ function ellipsePaintingFunc (event, type) {
     // }
     // 把数据对象放进实体类
     const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'ellipse', event.offsetX, event.offsetY)
-    _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
+    // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
+    setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
   } else if (type === 2) {
     // console.log("???")
     // 拖动时重设右下角点的值
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     let pointDataArray = canvasMarkDataObject.pointDataArray
     // 椭圆只有一个控制点
-    pointDataArray[0].x = event.offsetX
-    pointDataArray[0].y = event.offsetY
+    // pointDataArray[0].x = event.offsetX
+    // pointDataArray[0].y = event.offsetY
+    setCoreObjectArray(pointDataArray, "pointDataArray", "update", 0, null, {
+      x:event.offsetX,
+      y:event.offsetY
+    })
     // 算中心点 和控制点0 的差值
     let hori = canvasMarkDataObject.centerPointObject.center_x - event.offsetX
     let vert = canvasMarkDataObject.centerPointObject.center_y - event.offsetY
-    pointDataArray[1].x = canvasMarkDataObject.centerPointObject.center_x + hori
-    pointDataArray[1].y = canvasMarkDataObject.centerPointObject.center_y + vert
+    // pointDataArray[1].x = canvasMarkDataObject.centerPointObject.center_x + hori
+    // pointDataArray[1].y = canvasMarkDataObject.centerPointObject.center_y + vert
+    setCoreObjectArray(pointDataArray, "pointDataArray", "update", 1, null, {
+      x:canvasMarkDataObject.centerPointObject.center_x + hori,
+      y:canvasMarkDataObject.centerPointObject.center_y + vert
+    })
     // console.log(pointDataArray)
     // 重绘
     _this.clearTestFunc()
@@ -867,7 +900,8 @@ function ellipsePaintingFunc (event, type) {
     // final
     // if (!_this.isPaintedBoolean) {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
-    canvasMarkDataObject.completed = true    
+    // canvasMarkDataObject.completed = true
+    setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "completed", true)    
     _this.isPaintedBoolean = true
     _this.isEllipsePaintingBoolean = false
     // 重绘
@@ -908,13 +942,18 @@ function rectanglePaintingFunc (event, type) {
     // }
     // 把数据对象放进实体类
     const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'rectangle', event.offsetX, event.offsetY)
-    _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
+    // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
+    setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
   } else if (type === 2) {
     // 拖动时重设右下角点的值
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     let pointDataArray = canvasMarkDataObject.pointDataArray
-    pointDataArray[1].x = event.offsetX
-    pointDataArray[1].y = event.offsetY
+    // pointDataArray[1].x = event.offsetX
+    // pointDataArray[1].y = event.offsetY
+    setCoreObjectArray(pointDataArray, "pointDataArray", "update", 1, null, {
+      x:event.offsetX,
+      y:event.offsetY
+    })
     // 重绘
     _this.clearTestFunc()
     _this.reDrawFunc()
@@ -923,9 +962,13 @@ function rectanglePaintingFunc (event, type) {
     // final
     // if (!_this.isPaintedBoolean) {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
-    canvasMarkDataObject.completed = true
+    // let centerPointObject = canvasMarkDataObject.centerPointObject
+    // canvasMarkDataObject.completed = true
+    setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "completed", true)
     // 记录中心点
-    canvasMarkDataObject.centerPointObject = _this.$Painting_tools.calcCenterInPolygon(canvasMarkDataObject.pointDataArray, _this.$Tools.compareVal)
+    const new_center = _this.$Painting_tools.calcCenterInPolygon(canvasMarkDataObject.pointDataArray, _this.$Tools.compareVal)
+    // canvasMarkDataObject.centerPointObject = new_center
+    setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "centerPointObject", new_center)
     _this.isPaintedBoolean = true
     _this.isRectPaintingBoolean = false
     // 重绘
@@ -962,7 +1005,8 @@ function pointPaintingFunc (event) {
     // }
     // 把数据对象放进实体类
     const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'polygon', event.offsetX, event.offsetY)
-    _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
+    // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
+    setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
     // console.log(_this.canvasMarkDataArray)
     // console.log(_this.canvasMarkDataArray.length - 1)
     // console.log(canvasMarkDataObject)
@@ -984,14 +1028,69 @@ function pointPaintingFunc (event) {
     if (_this.$Painting_tools.checkPointAndPointIsNearFunc(event.offsetX, event.offsetY, prevX, prevY, _this.sqrtStandandNumber)) {
       settlePointFunc(pointDataArray.length)
     } else {
-      _this.$set(pointDataArray, 
-        pointDataArray.length, 
+      // _this.$set(pointDataArray, 
+      //   pointDataArray.length, 
+      //   {x: event.offsetX, y: event.offsetY})
+      setCoreObjectArray(pointDataArray, "pointDataArray", "add", pointDataArray.length, null,
         {x: event.offsetX, y: event.offsetY})
-      _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
+      // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
+      setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "update", _this.canvasMarkDataArray.length - 1, null, canvasMarkDataObject)
       _this.$Painting_tools.drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
       // drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
     }       
   }
+}
+// canvasMarkDataArray 的所有增删改归于一个函数管理
+// a target b name c status d index e key f value
+// name: [canvasMarkDataArray, canvasMarkDataObject, centerPointObject, pointDataArray, pointDataObject]
+function setCoreObjectArray(target, name, status, index, key, value){
+  // console.log("===" + name)
+  // 总数组
+  if (name === "canvasMarkDataArray") {
+    if (status === "add") {
+      _this.$set(target, target.length, value)
+      return
+    }
+    if (status === "update") {
+      _this.$set(target, index, value)
+      return
+    }
+    if (status === "delete") {
+      _this.$delete(target, index)
+      return
+    }
+  }
+  // 一个图形的对象
+  if (name === "canvasMarkDataObject") {
+    if (status === "update") {
+      if (typeof value === "boolean" || typeof value === "number" || typeof value === "null" || typeof value === "object") {
+        target[key] = value
+        return
+      }
+    }
+  }
+  // 一个图形对象的点数组
+  if (name === "pointDataArray") {
+    if (status === "add") {
+      _this.$set(target, target.length, value)
+      return
+    }
+    if (status === "update") {
+      _this.$set(target, index, value)
+      return
+    }
+    if (status === "delete") {
+      _this.$delete(target, index)
+      return
+    }
+  }
+  // 一个图形对象的点数组中的一个对象
+  // if (name === "pointDataObject") {
+  //   if (status === "update") {
+  //     target = value
+  //     return
+  //   }
+  // }
 }
 // 删除点的函数
 function pointDeleteFunc (event) {
@@ -1028,7 +1127,8 @@ function pointDeleteFunc (event) {
         }
       })
       // 删除某个点
-      _this.$delete(item.pointDataArray, delete_child_index)
+      // _this.$delete(item.pointDataArray, delete_child_index)
+      setCoreObjectArray(item.pointDataArray, "pointDataArray", "delete", delete_child_index, null, null)
       // 如果发现某个多边形已经没有点了 则删除这个多边形对象
       if (item.pointDataArray.length === 0) {
         delete_index = index
@@ -1038,7 +1138,8 @@ function pointDeleteFunc (event) {
       }
     })
     if (delete_index > -1) {
-      _this.$delete(_this.canvasMarkDataArray, delete_index)
+      // _this.$delete(_this.canvasMarkDataArray, delete_index)
+      setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "delete", delete_index, null, null)
     }
   } catch (error) {
     if (error.message === "end_foreach") {
@@ -1047,7 +1148,8 @@ function pointDeleteFunc (event) {
         return
       }
       if (confirm("确定删除这个多边形？")) {
-        _this.$delete(_this.canvasMarkDataArray, catch_index)
+        // _this.$delete(_this.canvasMarkDataArray, catch_index)
+        setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "delete", catch_index, null, null)
         if (_this.canvasMarkDataArray.length === 0) {
           checkCanvasMarkDataArrayFunc()
         }
@@ -1067,7 +1169,6 @@ function centerPointDeleteFunc (item, index, x, y) {
   // 横向距离  纵向距离
   // const hori = center_x - x, vert = center_y - y
   // const distance = Math.sqrt(hori*hori + vert*vert)
-  // 下一个就提你
   let distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, center_x, center_y)
   const judge_number = _this.centerPointHoverJudgeNumber
   if (distance < judge_number) {
@@ -1237,12 +1338,14 @@ function settlePointFunc (length) {
       _this.$Painting_tools.drawPointLineFunc(_this.canvasObject, pointDataArray, _this.lineColorString, _this.lineWidthNumber)
       drawCenterArcFunc(pointDataArray, canvasMarkDataObject)
       // 复制备用对象
-      _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
+      // _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
       _this.isPointingBoolean = false    // 正在绘制
       _this.isPaintedBoolean = true    // 绘制过
-      canvasMarkDataObject.completed = true
+      // canvasMarkDataObject.completed = true
+      setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "completed", true)
     } catch(error) {
-      canvasMarkDataObject.completed = false
+      console.log(error)
+      // canvasMarkDataObject.completed = false
     }    
   }
 }
