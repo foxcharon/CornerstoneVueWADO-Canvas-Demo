@@ -17,7 +17,24 @@
         <option value="2">矩形</option>
         <option value="3">椭圆</option>
       </select>
+      <div>
+        <p>图片放大缩小</p>
+        <button @click="zoomPlusFunc"> + </button> <button @click="zoomSubFunc"> - </button>
+        <p>图片位置控制</p>
+        <div class="direction-control">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+      </div>
       <ul v-if="canvasMarkDataArray[0]">
+        <p>数组最新对象的连接点坐标数值</p>
         <li v-for="(item,index) in canvasMarkDataArray[ canvasMarkDataArray.length-1 ].pointDataArray">
           {{ item.x + "-" + item.y }}
         </li>
@@ -25,11 +42,20 @@
       <button @click="submitTestFunc">selectValueString</button>
       <button @click="clearAllDataFunc">clear</button>
       <button @click="moveTestFunc">move</button>
+      <p>颜色滤镜</p>
       <select v-model="selectColorFilterString">
         <option value="0">正常</option>
         <option value="1">反色</option>
       </select>
+      <div>
+        <p>此时视图素材宽高：{{ canvasSizeObject ? canvasSizeObject.width : ""}} {{ canvasSizeObject ? canvasSizeObject.height : "" }}</p>
+        <p>此时放大级别：{{ zoomNumberArray[zoomIndexNumber] + "(" + zoomIndexNumber + ")"}}</p>
+      </div>
     </div>
+
+    <!--  -->
+    <canvas id="hide-canvas" style="display:none"></canvas>
+    <!--  -->
   </div>
 
 </template>
@@ -117,10 +143,18 @@ export default {
       isMouseTransformingPolygonBoolean:false,    // true 此时正在拉伸某个多边形，依赖上一个变量
       polygonTransformingMouseStartedCoordinateObject:null,    // 鼠标拉伸多边形 前一次的坐标
       polygonTransformingMouseContinueCoordinateObject:null,    // 鼠标拉伸多边形 现在的坐标
-      canvasSizeObject:null,    // 记录现canvas大小的对象
+      canvasSizeObject:null,    // 记录现canvas大小的对象 可变
+      canvasOriginSizeObject:null,    // 记录原canvas大小的对象 不变
       polygonLatingAndFormingIsDisconnectedBoolean:false,    // 鼠标拖动或拉伸多边形时与多边形失去连接
       isRectPaintingBoolean:false,    // 是否正在绘制矩形
       isEllipsePaintingBoolean:false,    // 是否正在绘制椭圆
+      zoomNumberArray:[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],    // 放大倍数数组
+      zoomIndexNumber:0,    // 此时处于哪个放大倍数
+      directionMemoryObject:{
+        x:0,
+        y:0
+      },    // 记忆点过的方向键的对象
+      directionStandandValueNumber:10    // 点1下移动几个像素
       // EDIT END
     };
   },
@@ -295,6 +329,10 @@ export default {
         width:c.width,
         height:c.height
       }
+      this.canvasOriginSizeObject = {
+        width:c.width,
+        height:c.height
+      }
       this.repeatGetCanvasDataFunc()
       // this.canvasOriginObject = this.canvasObject
       // console.log(this.canvasObject)
@@ -424,6 +462,78 @@ export default {
       d.forEach((item, index)=>{
         c[index] = item
       })
+    },
+    // 放大图片入口
+    zoomPlusFunc(){
+      const limit = this.zoomNumberArray.length - 1
+      const plus = x => x + 1;
+      const max = x => x > limit ? limit : x;
+      this.zoomIndexNumber = max(plus(this.zoomIndexNumber))  
+      // console.log(this.zoomIndexNumber)
+      this.calcNowSourceWidthHeightFunc()
+    },
+    // 缩小图片入口
+    zoomSubFunc(){
+      const limit = 0
+      const sub = x => x - 1;
+      const min = x => x < limit ? limit : x;
+      this.zoomIndexNumber = min(sub(this.zoomIndexNumber))  
+      // console.log(this.zoomIndexNumber)
+      this.calcNowSourceWidthHeightFunc()
+    },
+    // 计算相关值
+    calcNowSourceWidthHeightFunc(){
+      const w = this.canvasOriginSizeObject.width,
+        h = this.canvasOriginSizeObject.height,
+        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+      let now_w = parseInt(w / zoom_number),
+        now_h = parseInt(h / zoom_number),
+        x = parseInt((w - now_w) / 2),
+        y = parseInt((h - now_h) / 2);
+      let {x1, y1} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
+      console.log({x1, y1})
+      this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h)
+    },
+    // 检查XY是否在合法范围内
+    checkXYCurrentFunc(x, y, x_max_stand, y_max_stand){
+      // const base = x < y ? x : y
+      x < 0 ? x = 0 : ''
+      y < 0 ? y = 0 : ''
+      x > x_max_stand ? x = x_max_stand : ''
+      y > y_max_stand ? y = y_max_stand : ''
+      return {x1: x, y1: y}
+    },
+    // 渲染
+    renderAfterZoomChange(x, y, w, h, now_w, now_h){
+      const _this = this
+      // this.canvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
+      let hideCanvasHTML = document.getElementsByTagName("canvas")[1]
+      hideCanvasHTML.width = w,
+        hideCanvasHTML.height = h;
+      let hideCanvasObject = hideCanvasHTML.getContext('2d')
+      hideCanvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
+      hideCanvasHTML.toBlob(function (e) {
+        console.log(e)
+        const reader = new FileReader()
+        reader.readAsDataURL(e)
+        reader.onload = function(e){
+          let img = new Image()
+          img.src = e.target.result
+          img.id = "abc"
+          console.log(img)
+          img.style.display = "none"
+          document.body.appendChild(img)
+          img.onload = function () {
+            let canvasHTML = document.getElementsByTagName("canvas")[0]
+            let ctx = canvasHTML.getContext("2d")
+            ctx.drawImage(img, x, y, now_w, now_h, 0, 0, w, h)
+            _this.canvasSizeObject = {
+              width: now_w,
+              height: now_h
+            }
+          }
+        }
+      })
     }
     // getXYMaxMinPointFunc(arr, index){
     //   return arr[index]
@@ -438,7 +548,7 @@ export default {
     // let arr = [0,1,2]
     // this.$delete(arr,0)
     // console.log(arr)
-  },
+  },  
   watch:{
     // 用户操作选项
     selectValueString:function(new_value, old_value){
@@ -1414,5 +1524,19 @@ function drawCenterArcFunc(pointDataArray, canvasMarkDataObject){
   border: 1px solid #666;
   width:200px;
   height: 80vh;
+  overflow: auto;
+}
+.direction-control{
+  width: 90px;
+  height: 90px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.direction-control div{
+  width: 30px;
+  height: 30px;
+}
+.direction-control div:nth-child(even){
+  background: lightblue;
 }
 </style>
