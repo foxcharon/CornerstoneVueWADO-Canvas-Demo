@@ -23,13 +23,13 @@
         <p>图片位置控制</p>
         <div class="direction-control">
           <div></div>
+          <div @click="directionTopFunc"></div>
           <div></div>
+          <div @click="directionLeftFunc"></div>
           <div></div>
+          <div @click="directionRightFunc"></div>
           <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
+          <div @click="directionBottomFunc"></div>
           <div></div>
         </div>
       </div>
@@ -53,9 +53,9 @@
       </div>
     </div>
 
-    <!--  -->
+    <!-- 隐藏的canvas 放大缩小时需要用到 start -->
     <canvas id="hide-canvas" style="display:none"></canvas>
-    <!--  -->
+    <!-- end -->
   </div>
 
 </template>
@@ -154,6 +154,10 @@ export default {
         x:0,
         y:0
       },    // 记忆点过的方向键的对象
+      viewXYCoordinateObject:{
+        x:0,
+        y:0
+      },    // 此时源图视窗起始点（左上角）的XY坐标值
       directionStandandValueNumber:10    // 点1下移动几个像素
       // EDIT END
     };
@@ -481,17 +485,86 @@ export default {
       // console.log(this.zoomIndexNumber)
       this.calcNowSourceWidthHeightFunc()
     },
+    // 上方向键
+    directionTopFunc(){
+      const change = obj => ({y:obj.y - 1, x:obj.x})
+      this.directionMemoryObject = change(this.directionMemoryObject)
+      // console.log(this.directionMemoryObject)
+      this.calcNowSourceWidthHeightFunc()
+    },
+    // 左方向键
+    directionLeftFunc(){
+      const change = obj => ({y:obj.y, x:obj.x - 1})
+      this.directionMemoryObject = change(this.directionMemoryObject)
+      // console.log(this.directionMemoryObject)
+      this.calcNowSourceWidthHeightFunc()
+    },
+    // 右方向键
+    directionRightFunc(){
+      const change = obj => ({y:obj.y, x:obj.x + 1})
+      this.directionMemoryObject = change(this.directionMemoryObject)
+      // console.log(this.directionMemoryObject)
+      this.calcNowSourceWidthHeightFunc()
+    },
+    // 下方向键
+    directionBottomFunc(){
+      const change = obj => ({y:obj.y + 1, x:obj.x})
+      this.directionMemoryObject = change(this.directionMemoryObject)
+      // console.log(this.directionMemoryObject)
+      this.calcNowSourceWidthHeightFunc()
+    },
+    // 获取方向键对象取值范围
+    getDirectionNumberRange(){
+      const zoom_number = this.zoomNumberArray[this.zoomIndexNumber],
+        standand_number = this.directionStandandValueNumber,
+        w = this.canvasOriginSizeObject.width,
+        h = this.canvasOriginSizeObject.height;
+      let now_w = w / zoom_number,
+        now_h = h / zoom_number;
+      let proto_x = (w - now_w) / 2,
+        proto_y = (h - now_h) / 2;
+      let range_x = parseInt(proto_x / standand_number),
+        range_y = parseInt(proto_y / standand_number);
+      return {
+        x:[-range_x, range_x],
+        y:[-range_y, range_y]
+      }
+    },
+    // directionMemoryObject 修正
+    directionMemoryObjectRangeCheckFunc(directionMemoryObject, range_obj){
+      directionMemoryObject.x < range_obj.x[0] ? directionMemoryObject.x = range_obj.x[0] : ''
+      directionMemoryObject.y < range_obj.y[0] ? directionMemoryObject.y = range_obj.y[0] : ''
+      directionMemoryObject.x > range_obj.x[1] ? directionMemoryObject.x = range_obj.x[1] : ''
+      directionMemoryObject.y > range_obj.y[1] ? directionMemoryObject.y = range_obj.y[1] : ''
+      return directionMemoryObject
+    },
     // 计算相关值
     calcNowSourceWidthHeightFunc(){
+      const range_obj = this.getDirectionNumberRange()
+      // 获取初始宽高 放大倍数
       const w = this.canvasOriginSizeObject.width,
         h = this.canvasOriginSizeObject.height,
+        dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, range_obj),
+        standand = this.directionStandandValueNumber,
         zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+      // 计算现在用的源图片宽高 源图片初始点坐标
       let now_w = parseInt(w / zoom_number),
         now_h = parseInt(h / zoom_number),
-        x = parseInt((w - now_w) / 2),
-        y = parseInt((h - now_h) / 2);
-      let {x1, y1} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
-      console.log({x1, y1})
+        x = parseInt((w - now_w) / 2) + dmo.x * standand,
+        y = parseInt((h - now_h) / 2) + dmo.y * standand;
+      // x_max_stand:w - now_w, y_max_stand:h - now_h 原型值：没有点过方向键时xy的值
+      // 检查xy的值是否超出范围
+      let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
+      // x1 === 0 ? this.checkDirectionMemoryObject(x1, 0, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
+      // x1 === x_max_stand ? this.checkDirectionMemoryObject(x1, x_max_stand, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
+      // y1 === 0 ? this.checkDirectionMemoryObject(y1, 0, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
+      // x1 === y_max_stand ? this.checkDirectionMemoryObject(y1, y_max_stand, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
+      // 方向键点击数修正
+      console.log(x1, y1)
+      this.viewXYCoordinateObject = {
+        x:x1,
+        y:y1
+      }
       this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h)
     },
     // 检查XY是否在合法范围内
@@ -501,7 +574,12 @@ export default {
       y < 0 ? y = 0 : ''
       x > x_max_stand ? x = x_max_stand : ''
       y > y_max_stand ? y = y_max_stand : ''
-      return {x1: x, y1: y}
+      return {x1: x, y1: y, x_max_stand:x_max_stand, y_max_stand:y_max_stand}
+    },
+    // 检查 DirectionMemoryObject 废弃？
+    checkDirectionMemoryObject(render_key, value, stand, key, obj){
+      const directionStandandValueNumber = this.directionStandandValueNumber
+      obj[key] = parseInt((value - stand) / directionStandandValueNumber)
     },
     // 渲染
     renderAfterZoomChange(x, y, w, h, now_w, now_h){
@@ -513,14 +591,14 @@ export default {
       let hideCanvasObject = hideCanvasHTML.getContext('2d')
       hideCanvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
       hideCanvasHTML.toBlob(function (e) {
-        console.log(e)
+        // console.log(e)
         const reader = new FileReader()
         reader.readAsDataURL(e)
         reader.onload = function(e){
           let img = new Image()
           img.src = e.target.result
           img.id = "abc"
-          console.log(img)
+          // console.log(img)
           img.style.display = "none"
           document.body.appendChild(img)
           img.onload = function () {
