@@ -114,6 +114,7 @@ export default {
       // EDIT ===>>> 20190109
       canvasObject:null,    // CanvasRenderingContext2D
       canvasOriginDataObject:null,   // CanvasRenderingContext2D-imgdata-origin
+      canvasOriginZoomDataObject:null,   // CanvasRenderingContext2D-imgdata-with-zoom-origin
       canvasMarkDataArray:[],    // 记录canvas标注数据的数组 视图模型
       anotherCanvasMarkDataArray:[],    // 记录canvas标注数据的数组 数据模型
       selectValueString:"0",    // 选择模式
@@ -158,6 +159,10 @@ export default {
         x:0,
         y:0
       },    // 此时源图视窗起始点（左上角）的XY坐标值
+      prototypeXYCoordinateObject:{
+        x:0,
+        y:0
+      },    // XY坐标原型值（如果没有点任何方向键，此时XY坐标值是多少）
       directionStandandValueNumber:10    // 点1下移动几个像素
       // EDIT END
     };
@@ -363,6 +368,7 @@ export default {
       // console.log("repeatGetCanvasDataFunc")
       const width = this.canvasSizeObject.width, height = this.canvasSizeObject.height
       this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, width, height)
+      this.canvasOriginZoomDataObject = this.canvasObject.getImageData(0, 0, width, height)
       if (this.canvasOriginDataObject.data[3] !== 0) {
         // const Color = this.$color
         // let color_array = new this.$Color_class(this.canvasObject.getImageData(0, 0, width, height).data)
@@ -385,7 +391,7 @@ export default {
     },
     clearTestFunc(){
       // console.log("clearTestFunc")
-      this.canvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
+      this.canvasObject.putImageData(this.canvasOriginZoomDataObject, 0, 0)
       // console.log(this.canvasOriginDataObject)
     },
     moveTestFunc(){
@@ -523,8 +529,8 @@ export default {
         now_h = h / zoom_number;
       let proto_x = (w - now_w) / 2,
         proto_y = (h - now_h) / 2;
-      let range_x = parseInt(proto_x / standand_number),
-        range_y = parseInt(proto_y / standand_number);
+      let range_x = proto_x / standand_number,
+        range_y = proto_y / standand_number;
       return {
         x:[-range_x, range_x],
         y:[-range_y, range_y]
@@ -532,10 +538,12 @@ export default {
     },
     // directionMemoryObject 修正
     directionMemoryObjectRangeCheckFunc(directionMemoryObject, range_obj){
-      directionMemoryObject.x < range_obj.x[0] ? directionMemoryObject.x = range_obj.x[0] : ''
-      directionMemoryObject.y < range_obj.y[0] ? directionMemoryObject.y = range_obj.y[0] : ''
-      directionMemoryObject.x > range_obj.x[1] ? directionMemoryObject.x = range_obj.x[1] : ''
-      directionMemoryObject.y > range_obj.y[1] ? directionMemoryObject.y = range_obj.y[1] : ''
+      console.log(directionMemoryObject, range_obj)
+      directionMemoryObject.x < range_obj.x[0] ? directionMemoryObject.x = parseInt(range_obj.x[0]) : ''
+      directionMemoryObject.y < range_obj.y[0] ? directionMemoryObject.y = parseInt(range_obj.y[0]) : ''
+      directionMemoryObject.x > range_obj.x[1] ? directionMemoryObject.x = parseInt(range_obj.x[1]) : ''
+      directionMemoryObject.y > range_obj.y[1] ? directionMemoryObject.y = parseInt(range_obj.y[1]) : ''
+      console.log(directionMemoryObject)
       return directionMemoryObject
     },
     // 计算相关值
@@ -547,12 +555,20 @@ export default {
         dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, range_obj),
         standand = this.directionStandandValueNumber,
         zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+      let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
+        viewXYCoordinateObject = this.viewXYCoordinateObject;
+      console.log("?", dmo)
       // 计算现在用的源图片宽高 源图片初始点坐标
       let now_w = parseInt(w / zoom_number),
         now_h = parseInt(h / zoom_number),
         x = parseInt((w - now_w) / 2) + dmo.x * standand,
         y = parseInt((h - now_h) / 2) + dmo.y * standand;
-      // x_max_stand:w - now_w, y_max_stand:h - now_h 原型值：没有点过方向键时xy的值
+      // x_max_stand:w - now_w, y_max_stand:h - now_h 两倍原型值 prototypeValue2X
+      // (w - now_w) / 2,  (h - now_h) / 2 原型值：没有点过方向键时xy的值
+      prototypeXYCoordinateObject = {
+        x: parseInt((w - now_w) / 2),
+        y: parseInt((h - now_h) / 2)
+      }
       // 检查xy的值是否超出范围
       let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
       // x1 === 0 ? this.checkDirectionMemoryObject(x1, 0, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
@@ -560,11 +576,18 @@ export default {
       // y1 === 0 ? this.checkDirectionMemoryObject(y1, 0, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
       // x1 === y_max_stand ? this.checkDirectionMemoryObject(y1, y_max_stand, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
       // 方向键点击数修正
-      console.log(x1, y1)
-      this.viewXYCoordinateObject = {
-        x:x1,
-        y:y1
+      
+      // ???
+      console.log(y1, prototypeXYCoordinateObject.y, standand, w)
+      viewXYCoordinateObject = {
+        x: dmo.x,
+        y: dmo.y
       }
+      // viewXYCoordinateObject = {
+      //   x: x1,
+      //   y: y1
+      // }
+      console.log("dmo", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
       this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h)
     },
     // 检查XY是否在合法范围内
@@ -576,7 +599,7 @@ export default {
       y > y_max_stand ? y = y_max_stand : ''
       return {x1: x, y1: y, x_max_stand:x_max_stand, y_max_stand:y_max_stand}
     },
-    // 检查 DirectionMemoryObject 废弃？
+    // 检查 DirectionMemoryObject 已废弃
     checkDirectionMemoryObject(render_key, value, stand, key, obj){
       const directionStandandValueNumber = this.directionStandandValueNumber
       obj[key] = parseInt((value - stand) / directionStandandValueNumber)
@@ -609,6 +632,11 @@ export default {
               width: now_w,
               height: now_h
             }
+            // 记录zoomOriginData
+            _this.canvasOriginZoomDataObject = ctx.getImageData(0, 0, w, h) 
+            // 重绘
+            _this.reDrawFunc()
+            document.body.removeChild(img)
           }
         }
       })
@@ -765,17 +793,24 @@ function painting() {
                     // 中心点重新赋值
                     // item.centerPointObject.center_x = item.centerPointObject.center_x + coor_x_distance
                     // item.centerPointObject.center_y = item.centerPointObject.center_y + coor_y_distance
+                    let new_center_x = item.centerPointObject.center_x + coor_x_distance
+                    let new_center_y = item.centerPointObject.center_y + coor_y_distance
                     setCoreObjectArray(item, "canvasMarkDataObject", "update", 0, "centerPointObject", {
-                      center_x:item.centerPointObject.center_x + coor_x_distance,
-                      center_y:item.centerPointObject.center_y + coor_y_distance
+                      center_x:new_center_x,
+                      center_y:new_center_y
                     })
+                    // displayModel -> dataModel
+                    // 显示模型数据 - 数据模型数据
+                    // const modelDataObject = getCurrentDataModelSinglePointValue({new_center_x, new_center_y})
                     // 多边形坐标点重新赋值
                     item.pointDataArray.forEach((child_item, child_index, this_arr)=>{
                       // child_item.x = child_item.x + coor_x_distance
                       // child_item.y = child_item.y + coor_y_distance
+                      let new_child_item_x = child_item.x + coor_x_distance
+                      let new_child_item_y = child_item.y + coor_y_distance
                       setCoreObjectArray(this_arr, "pointDataArray", "update", child_index, null, {
-                        x:child_item.x + coor_x_distance,
-                        y:child_item.y + coor_y_distance
+                        x:new_child_item_x,
+                        y:new_child_item_y
                       })
                     })
                     // 修正polygonMovingMouseStartedCoordinateObject，保证下一次移动正常
@@ -865,16 +900,18 @@ function painting() {
                   let transform_coor_obj = item.pointDataArray[item.pointActiveIndex]
                   // transform_coor_obj.x = transform_coor_obj.x + coor_x_distance
                   // transform_coor_obj.y = transform_coor_obj.y + coor_y_distance
+                  let new_transform_coor_obj_x = transform_coor_obj.x + coor_x_distance
+                  let new_transform_coor_obj_y = transform_coor_obj.y + coor_y_distance
                   setCoreObjectArray(item.pointDataArray, "pointDataArray", "update", item.pointActiveIndex, null, {
-                    x:transform_coor_obj.x + coor_x_distance,
-                    y:transform_coor_obj.y + coor_y_distance
+                    x:new_transform_coor_obj_x,
+                    y:new_transform_coor_obj_y
                   })
                   // 修正
                   obj_a.x = obj_b.x
                   obj_a.y = obj_b.y
                   // 中心点坐标重设
                   const new_center = _this.$Painting_tools.calcCenterInPolygon(item.pointDataArray, _this.$Tools.compareVal)
-                  item.centerPointObject = new_center
+                  // item.centerPointObject = new_center
                   setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "centerPointObject", new_center)
                 }
               }
@@ -1058,11 +1095,20 @@ function ellipsePaintingFunc (event, type) {
     const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'ellipse', event.offsetX, event.offsetY)
     // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
     setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    // 用...运算符实现深拷贝
+    const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
   } else if (type === 2) {
     // console.log("???")
     // 拖动时重设右下角点的值
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     let pointDataArray = canvasMarkDataObject.pointDataArray
+    // _this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1].pointDataArray = null
+    let pointDataArray_2 = _this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1].pointDataArray
+    // console.log(pointDataArray[0].x)
+    // console.log(_this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1].pointDataArray[0].x)
     // 椭圆只有一个控制点
     // pointDataArray[0].x = event.offsetX
     // pointDataArray[0].y = event.offsetY
@@ -1070,15 +1116,31 @@ function ellipsePaintingFunc (event, type) {
       x:event.offsetX,
       y:event.offsetY
     })
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    const modelDataObject = getCurrentDataModelSinglePointValue({
+      x:event.offsetX,
+      y:event.offsetY
+    }, "connect")
+    setCoreObjectArray(pointDataArray_2, "pointDataArray", "update", 0, null, modelDataObject)
     // 算中心点 和控制点0 的差值
     let hori = canvasMarkDataObject.centerPointObject.center_x - event.offsetX
     let vert = canvasMarkDataObject.centerPointObject.center_y - event.offsetY
     // pointDataArray[1].x = canvasMarkDataObject.centerPointObject.center_x + hori
     // pointDataArray[1].y = canvasMarkDataObject.centerPointObject.center_y + vert
+    let second_point_x = canvasMarkDataObject.centerPointObject.center_x + hori
+    let second_point_y = canvasMarkDataObject.centerPointObject.center_y + vert
     setCoreObjectArray(pointDataArray, "pointDataArray", "update", 1, null, {
-      x:canvasMarkDataObject.centerPointObject.center_x + hori,
-      y:canvasMarkDataObject.centerPointObject.center_y + vert
+      x:second_point_x,
+      y:second_point_y
     })
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    const modelDataObject_singlePoint = getCurrentDataModelSinglePointValue({
+      x:second_point_x,
+      y:second_point_y
+    }, "connect")
+    setCoreObjectArray(pointDataArray_2, "pointDataArray", "update", 1, null, modelDataObject_singlePoint)
     // console.log(pointDataArray)
     // 重绘
     _this.clearTestFunc()
@@ -1088,8 +1150,10 @@ function ellipsePaintingFunc (event, type) {
     // final
     // if (!_this.isPaintedBoolean) {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
+    // let canvasMarkDataObject_2 = _this.anotherCanvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     // canvasMarkDataObject.completed = true
     setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "completed", true)    
+    // setCoreObjectArray(canvasMarkDataObject_2, "canvasMarkDataObject", "update", null, "completed", true)    
     _this.isPaintedBoolean = true
     _this.isEllipsePaintingBoolean = false
     // 重绘
@@ -1363,6 +1427,75 @@ function centerPointDeleteFunc (item, index, x, y) {
     return true
   } else {
     return false
+  }
+}
+// displayModel -> dataModel
+// 把显示模型的数据转成数据模型
+// type ellipse rectangle polygon
+function getCurrentDataModelValue(canvasMarkDataObject, type){
+  console.log("getCurrentDataModelValue")
+  canvasMarkDataObject.isDataModel2 = true
+  const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber]
+  const proto_obj = _this.prototypeXYCoordinateObject
+  // zoom为 1时直接返回原对象
+  if (zoom_number === 1) {
+    return canvasMarkDataObject
+  } else {
+    if (type === "ellipse") {
+      console.log(canvasMarkDataObject)
+      let {center_x, center_y} = canvasMarkDataObject.centerPointObject
+      // console.log({x, y})
+      // console.log(proto_obj)
+      const x_calc = (num) => proto_obj.x + num
+      const y_calc = (num) => proto_obj.y + num
+      const obj = {
+        center_x: x_calc(center_x),
+        center_y: y_calc(center_y)
+      }
+      // console.log(obj)
+      // 把修改后的值赋值给(dataModel)canvasMarkDataObject
+      canvasMarkDataObject.centerPointObject = obj      
+      // canvasMarkDataObject.pointDataArray[0] = {
+      //   x:obj.center_x,
+      //   y:obj.center_y
+      // }
+      canvasMarkDataObject.pointDataArray = [
+        {
+          x:obj.center_x,
+          y:obj.center_y
+        },
+        {
+          x:obj.center_x,
+          y:obj.center_y
+        }
+      ]      
+      return canvasMarkDataObject
+    } else if (type === "rectangle") {
+
+    } else if (type === "polygon") {
+
+    }
+  }
+}
+// displayModel -> dataModel
+// 把显示模型的数据转成数据模型
+// 当数据是只有xy值的对象时用这个
+// type connect 连接点 center 中心点
+function getCurrentDataModelSinglePointValue(singlePointObject, type){
+  const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber]
+  const proto_obj = _this.prototypeXYCoordinateObject
+  // zoom为 1时直接返回原对象
+  if (zoom_number === 1) {
+    return singlePointObject
+  } else {
+    let {x, y} = singlePointObject
+    const x_calc = (num) => proto_obj.x + num
+    const y_calc = (num) => proto_obj.y + num
+    let obj
+    type === "connect" ? obj = {x:x_calc(x), y:y_calc(y)} : ''
+    type === "center" ? obj = {center_x:x_calc(x), center_y:y_calc(y)} : ''
+    console.log(obj)
+    return obj
   }
 }
 // 双击时删除多余的点（已废弃）
