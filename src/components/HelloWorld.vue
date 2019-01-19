@@ -565,10 +565,10 @@ export default {
         y = parseInt((h - now_h) / 2) + dmo.y * standand;
       // x_max_stand:w - now_w, y_max_stand:h - now_h 两倍原型值 prototypeValue2X
       // (w - now_w) / 2,  (h - now_h) / 2 原型值：没有点过方向键时xy的值
-      prototypeXYCoordinateObject = {
-        x: parseInt((w - now_w) / 2),
-        y: parseInt((h - now_h) / 2)
-      }
+      prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
+      prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)
+      console.log(prototypeXYCoordinateObject)
+      console.log(this.prototypeXYCoordinateObject)
       // 检查xy的值是否超出范围
       let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
       // x1 === 0 ? this.checkDirectionMemoryObject(x1, 0, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
@@ -578,11 +578,9 @@ export default {
       // 方向键点击数修正
       
       // ???
-      console.log(y1, prototypeXYCoordinateObject.y, standand, w)
-      viewXYCoordinateObject = {
-        x: dmo.x,
-        y: dmo.y
-      }
+      console.log(x1, y1, prototypeXYCoordinateObject.y, standand, w)
+      viewXYCoordinateObject.x = dmo.x
+      viewXYCoordinateObject.y = dmo.y
       // viewXYCoordinateObject = {
       //   x: x1,
       //   y: y1
@@ -801,7 +799,9 @@ function painting() {
                     })
                     // displayModel -> dataModel
                     // 显示模型数据 - 数据模型数据
-                    // const modelDataObject = getCurrentDataModelSinglePointValue({new_center_x, new_center_y})
+                    const modelDataObject = getCurrentDataModelSinglePointValue({center_x:new_center_x, center_y:new_center_y}, "center")
+                    // item 对应 _this.anotherCanvasMarkDataArray[index]
+                    setCoreObjectArray(_this.anotherCanvasMarkDataArray[index], "canvasMarkDataObject", "update", 0, "centerPointObject", modelDataObject)
                     // 多边形坐标点重新赋值
                     item.pointDataArray.forEach((child_item, child_index, this_arr)=>{
                       // child_item.x = child_item.x + coor_x_distance
@@ -812,6 +812,10 @@ function painting() {
                         x:new_child_item_x,
                         y:new_child_item_y
                       })
+                      // displayModel -> dataModel
+                      // 显示模型数据 - 数据模型数据
+                      const modelDataObject_singlePoint = getCurrentDataModelSinglePointValue({x:new_child_item_x, y:new_child_item_y}, "connect")
+                      setCoreObjectArray(_this.anotherCanvasMarkDataArray[index].pointDataArray, "pointDataArray", "update", child_index, null, modelDataObject_singlePoint)
                     })
                     // 修正polygonMovingMouseStartedCoordinateObject，保证下一次移动正常
                     obj_a.x = obj_b.x
@@ -1433,10 +1437,12 @@ function centerPointDeleteFunc (item, index, x, y) {
 // 把显示模型的数据转成数据模型
 // type ellipse rectangle polygon
 function getCurrentDataModelValue(canvasMarkDataObject, type){
-  console.log("getCurrentDataModelValue")
-  canvasMarkDataObject.isDataModel2 = true
-  const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber]
-  const proto_obj = _this.prototypeXYCoordinateObject
+  // console.log("getCurrentDataModelValue")
+  // canvasMarkDataObject.isDataModel2 = true
+  const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber],
+    proto_obj = _this.prototypeXYCoordinateObject,
+    standand_number = _this.directionStandandValueNumber,
+    view_coordinate = _this.viewXYCoordinateObject;
   // zoom为 1时直接返回原对象
   if (zoom_number === 1) {
     return canvasMarkDataObject
@@ -1446,11 +1452,16 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
       let {center_x, center_y} = canvasMarkDataObject.centerPointObject
       // console.log({x, y})
       // console.log(proto_obj)
-      const x_calc = (num) => proto_obj.x + num
-      const y_calc = (num) => proto_obj.y + num
+      // A = (width - width / zoom比例) / 2
+      // B = A + ([display]x / zoom比例)
+      // C = B + (方向键值 * 方向值单位)
+      console.log(_this.prototypeXYCoordinateObject)
+      console.log(proto_obj.x, center_x / zoom_number, view_coordinate.x * standand_number)
+      const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x * standand_number
+      const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y * standand_number
       const obj = {
-        center_x: x_calc(center_x),
-        center_y: y_calc(center_y)
+        center_x: parseInt(x_calc(center_x)),
+        center_y: parseInt(y_calc(center_y))
       }
       // console.log(obj)
       // 把修改后的值赋值给(dataModel)canvasMarkDataObject
@@ -1482,18 +1493,26 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
 // 当数据是只有xy值的对象时用这个
 // type connect 连接点 center 中心点
 function getCurrentDataModelSinglePointValue(singlePointObject, type){
-  const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber]
-  const proto_obj = _this.prototypeXYCoordinateObject
+  if (!(type === "connect" || type === "center")) {
+    console.warn("getCurrentDataModelSinglePointValue type ERROR: unknown type " + `=${type}=`)
+  }
+  console.log(type)
+  const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber],
+    proto_obj = _this.prototypeXYCoordinateObject,
+    standand_number = _this.directionStandandValueNumber,
+    view_coordinate = _this.viewXYCoordinateObject;
   // zoom为 1时直接返回原对象
   if (zoom_number === 1) {
     return singlePointObject
   } else {
-    let {x, y} = singlePointObject
-    const x_calc = (num) => proto_obj.x + num
-    const y_calc = (num) => proto_obj.y + num
+    let x, y
+    type === "connect" ? x = singlePointObject.x : x = singlePointObject.center_x
+    type === "connect" ? y = singlePointObject.y : y = singlePointObject.center_y
+    const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x * standand_number
+    const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y * standand_number
     let obj
-    type === "connect" ? obj = {x:x_calc(x), y:y_calc(y)} : ''
-    type === "center" ? obj = {center_x:x_calc(x), center_y:y_calc(y)} : ''
+    type === "connect" ? obj = {x:parseInt(x_calc(x)), y:parseInt(y_calc(y))} : obj = {center_x:parseInt(x_calc(x)), center_y:parseInt(y_calc(y))}
+    // type === "center" ? obj = {center_x:x_calc(x), center_y:y_calc(y)} : ''
     console.log(obj)
     return obj
   }
