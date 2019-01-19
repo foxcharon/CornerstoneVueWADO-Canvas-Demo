@@ -621,6 +621,7 @@ export default {
           img.id = "abc"
           // console.log(img)
           img.style.display = "none"
+          // img注入进DOM
           document.body.appendChild(img)
           img.onload = function () {
             let canvasHTML = document.getElementsByTagName("canvas")[0]
@@ -631,11 +632,78 @@ export default {
               height: now_h
             }
             // 记录zoomOriginData
-            _this.canvasOriginZoomDataObject = ctx.getImageData(0, 0, w, h) 
+            _this.canvasOriginZoomDataObject = ctx.getImageData(0, 0, w, h)
+            // 重计算displayModel
+            _this.resetDisplayModelFunc()
             // 重绘
             _this.reDrawFunc()
+            // img从DOM中移除
             document.body.removeChild(img)
           }
+        }
+      })
+    },
+    // 重设显示模型的数据
+    resetDisplayModelFunc(){
+      const range_obj = this.getDirectionNumberRange()
+      // pXYc 当前倍率下的原型点位置 dmo 点了几次方向键 standand 移动单位标准值
+      const pXYc = this.prototypeXYCoordinateObject,
+        dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, range_obj),
+        standand = this.directionStandandValueNumber,
+        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+      // pXYc + dmo*standand = pXYcWithOffset 偏差原型值（原型值 + 移动偏差值）
+      const pXYcWithOffset = {
+        x:pXYc.x + dmo.x * standand,
+        y:pXYc.y + dmo.y * standand
+      }
+      let canvasMarkDataArray = this.canvasMarkDataArray
+      this.anotherCanvasMarkDataArray.forEach((item, index, this_arr) => {
+        if (item.type === "ellipse") {
+          // 中心点 center
+          const centerPointObject = item.centerPointObject
+          // dataModel中这个点与所知坐标的差值
+          const no_mult_coor_center = {
+            center_x:centerPointObject.center_x - pXYcWithOffset.x,
+            center_y:centerPointObject.center_y - pXYcWithOffset.y
+          }
+          console.log(no_mult_coor_center)
+          // 得到的坐标再乘以倍率
+          const have_mult_coor_center = {
+            center_x: parseInt(no_mult_coor_center.center_x * zoom_number),
+            center_y: parseInt(no_mult_coor_center.center_y * zoom_number)
+          }
+          console.log(have_mult_coor_center)
+          // set
+          setCoreObjectArray(canvasMarkDataArray[index], "canvasMarkDataObject", "update", 0, "centerPointObject", have_mult_coor_center)
+          // 链接点 connect
+          // let point_arr = canvasMarkDataArray[index]
+          // console.log(point_arr)
+          let new_point_arr = []
+          item.pointDataArray.forEach((child_item, child_index, child_this_arr) => {            
+            const point = child_item
+            const no_mult_coor_connect = {
+              x:point.x - pXYcWithOffset.x,
+              y:point.y - pXYcWithOffset.y
+            }
+            const have_mult_coor_connect = {
+              x: parseInt(no_mult_coor_connect.x * zoom_number),
+              y: parseInt(no_mult_coor_connect.y * zoom_number)
+            }
+            console.log(child_item)
+            console.log(have_mult_coor_connect)
+            new_point_arr.push(have_mult_coor_connect)
+            // set
+            // setCoreObjectArray(point_arr.pointDataArray, "pointDataArray", "update", child_index, null, have_mult_coor_connect)
+            // point_arr.pointDataArray[0].x = 499
+          })
+          // set
+          setCoreObjectArray(canvasMarkDataArray[index], "canvasMarkDataObject", "update", 0, "pointDataArray", new_point_arr)
+        } else if (item.type === "rectangle") {
+
+        } else if (item.type === "polygon") {
+
+        } else {
+          console.warn("resetDisplayModelFunc TYPE ERROR")
         }
       })
     }
@@ -910,13 +978,23 @@ function painting() {
                     x:new_transform_coor_obj_x,
                     y:new_transform_coor_obj_y
                   })
+                  // displayModel -> dataModel
+                  // 显示模型数据 - 数据模型数据
+                  const modelDataObject = getCurrentDataModelSinglePointValue({x:new_transform_coor_obj_x, y:new_transform_coor_obj_y}, "connect")
+                  // item 对应 _this.anotherCanvasMarkDataArray[index]
+                  setCoreObjectArray(_this.anotherCanvasMarkDataArray[index].pointDataArray, "pointDataArray", "update", item.pointActiveIndex, null, modelDataObject)
                   // 修正
                   obj_a.x = obj_b.x
                   obj_a.y = obj_b.y
                   // 中心点坐标重设
-                  const new_center = _this.$Painting_tools.calcCenterInPolygon(item.pointDataArray, _this.$Tools.compareVal)
+                  const new_center = _this.$Painting_tools.calcCenterInPolygon(item.pointDataArray, _this.$Tools.compareVal)   
                   // item.centerPointObject = new_center
                   setCoreObjectArray(item, "canvasMarkDataObject", "update", null, "centerPointObject", new_center)
+                  // displayModel -> dataModel
+                  // 显示模型数据 - 数据模型数据
+                  const modelDataObject_center = getCurrentDataModelSinglePointValue(new_center, "center")
+                  // item 对应 _this.anotherCanvasMarkDataArray[index]
+                  setCoreObjectArray(_this.anotherCanvasMarkDataArray[index], "canvasMarkDataObject", "update", null, "centerPointObject", modelDataObject_center)
                 }
               }
               // 如果找中心点，就不点亮连接点
@@ -1298,7 +1376,7 @@ function pointPaintingFunc (event) {
 }
 // canvasMarkDataArray 的所有增删改归于一个函数管理
 // a target b name c status d index e key f value
-// name: [canvasMarkDataArray, canvasMarkDataObject, centerPointObject, pointDataArray, pointDataObject]
+// name: [canvasMarkDataArray, canvasMarkDataObject, centerPointObject, pointDataArray]
 function setCoreObjectArray(target, name, status, index, key, value){
   // console.log("===" + name)
   // 总数组
@@ -1385,6 +1463,8 @@ function pointDeleteFunc (event) {
       // 删除某个点
       // _this.$delete(item.pointDataArray, delete_child_index)
       setCoreObjectArray(item.pointDataArray, "pointDataArray", "delete", delete_child_index, null, null)
+      // 对应的dataModelObject也要删除
+      setCoreObjectArray(_this.anotherCanvasMarkDataArray[index].pointDataArray, "pointDataArray", "delete", delete_child_index, null, null)
       // 如果发现某个多边形已经没有点了 则删除这个多边形对象
       if (item.pointDataArray.length === 0) {
         delete_index = index
@@ -1396,6 +1476,8 @@ function pointDeleteFunc (event) {
     if (delete_index > -1) {
       // _this.$delete(_this.canvasMarkDataArray, delete_index)
       setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "delete", delete_index, null, null)
+      // 对应的dataModelObject也要删除
+      setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "delete", delete_index, null, null)
     }
   } catch (error) {
     if (error.message === "end_foreach") {
@@ -1406,6 +1488,8 @@ function pointDeleteFunc (event) {
       if (confirm("确定删除这个多边形？")) {
         // _this.$delete(_this.canvasMarkDataArray, catch_index)
         setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "delete", catch_index, null, null)
+        // 对应的dataModelObject也要删除
+        setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "delete", catch_index, null, null)
         if (_this.canvasMarkDataArray.length === 0) {
           checkCanvasMarkDataArrayFunc()
         }
@@ -1416,12 +1500,14 @@ function pointDeleteFunc (event) {
   _this.clearTestFunc()
   _this.reDrawFunc()
 }
+// 检查想删除的点是不是中心点
 function centerPointDeleteFunc (item, index, x, y) {
   // 如果多边形没画完，就不存在中心点
   if (!item.completed || !item.centerPointObject) {
     return false
   }
-  const center_x = item.centerPointObject.center_x, center_y = item.centerPointObject.center_y
+  const center_x = item.centerPointObject.center_x, 
+    center_y = item.centerPointObject.center_y;
   // 横向距离  纵向距离
   // const hori = center_x - x, vert = center_y - y
   // const distance = Math.sqrt(hori*hori + vert*vert)
@@ -1496,7 +1582,7 @@ function getCurrentDataModelSinglePointValue(singlePointObject, type){
   if (!(type === "connect" || type === "center")) {
     console.warn("getCurrentDataModelSinglePointValue type ERROR: unknown type " + `=${type}=`)
   }
-  console.log(type)
+  // console.log(type)
   const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber],
     proto_obj = _this.prototypeXYCoordinateObject,
     standand_number = _this.directionStandandValueNumber,
