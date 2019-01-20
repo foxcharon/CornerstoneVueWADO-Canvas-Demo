@@ -82,5 +82,22 @@ export default class myUtils {
             }
 　　    }
     }
+    /**
+     *
+     * @desc   递归法 对象深拷贝
+     * @param  {Object}
+     * @return {new Object}
+     */
+    static objectCopy (obj) {
+        var newobj = obj.constructor === Array ? [] : {};
+        if(typeof obj !== 'object'){
+            return;
+        }
+        for(var i in obj){
+           newobj[i] = typeof obj[i] === 'object' ?
+           copy(obj[i]) : obj[i];
+        }
+        return newobj
+    }
 }
 

@@ -658,7 +658,7 @@ export default {
       }
       let canvasMarkDataArray = this.canvasMarkDataArray
       this.anotherCanvasMarkDataArray.forEach((item, index, this_arr) => {
-        if (item.type === "ellipse") {
+        if (true) {
           // 中心点 center
           const centerPointObject = item.centerPointObject
           // dataModel中这个点与所知坐标的差值
@@ -695,13 +695,16 @@ export default {
             // set
             // setCoreObjectArray(point_arr.pointDataArray, "pointDataArray", "update", child_index, null, have_mult_coor_connect)
             // point_arr.pointDataArray[0].x = 499
+            // 对象没有深拷贝，所以子key的引用有问题，需要对子key值进行直接重设
           })
           // set
           setCoreObjectArray(canvasMarkDataArray[index], "canvasMarkDataObject", "update", 0, "pointDataArray", new_point_arr)
+        } else if (item.type === "ellipse") {
+          return
         } else if (item.type === "rectangle") {
-
+          return
         } else if (item.type === "polygon") {
-
+          return
         } else {
           console.warn("resetDisplayModelFunc TYPE ERROR")
         }
@@ -1179,7 +1182,7 @@ function ellipsePaintingFunc (event, type) {
     setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
     // displayModel -> dataModel
     // 显示模型的数据 - 数据模型的数据
-    // 用...运算符实现深拷贝
+    // 用...运算符实现拷贝（不深）
     const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
     setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
   } else if (type === 2) {
@@ -1278,16 +1281,30 @@ function rectanglePaintingFunc (event, type) {
     const canvasMarkDataObject = new _this.$CanvasMarkDataObject_class(_this.$Tools.randomString(), 'rectangle', event.offsetX, event.offsetY)
     // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length, canvasMarkDataObject)
     setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    // 用...运算符实现拷贝（不深）
+    const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
   } else if (type === 2) {
     // 拖动时重设右下角点的值
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     let pointDataArray = canvasMarkDataObject.pointDataArray
+    // another
+    let pointDataArray_2 = _this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1].pointDataArray
     // pointDataArray[1].x = event.offsetX
     // pointDataArray[1].y = event.offsetY
     setCoreObjectArray(pointDataArray, "pointDataArray", "update", 1, null, {
       x:event.offsetX,
       y:event.offsetY
     })
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    const modelDataObject = getCurrentDataModelSinglePointValue({
+      x:event.offsetX,
+      y:event.offsetY
+    }, "connect")
+    setCoreObjectArray(pointDataArray_2, "pointDataArray", "update", 1, null, modelDataObject)
     // 重绘
     _this.clearTestFunc()
     _this.reDrawFunc()
@@ -1296,6 +1313,8 @@ function rectanglePaintingFunc (event, type) {
     // final
     // if (!_this.isPaintedBoolean) {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
+    // another
+    let canvasMarkDataObject_another = _this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1]
     // let centerPointObject = canvasMarkDataObject.centerPointObject
     // canvasMarkDataObject.completed = true
     setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "completed", true)
@@ -1303,6 +1322,14 @@ function rectanglePaintingFunc (event, type) {
     const new_center = _this.$Painting_tools.calcCenterInPolygon(canvasMarkDataObject.pointDataArray, _this.$Tools.compareVal)
     // canvasMarkDataObject.centerPointObject = new_center
     setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "centerPointObject", new_center)
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    const modelDataObject = getCurrentDataModelSinglePointValue({
+      center_x:new_center.center_x,
+      center_y:new_center.center_y,
+    }, "center")
+    setCoreObjectArray(canvasMarkDataObject_another, "canvasMarkDataObject", "update", null, "centerPointObject", modelDataObject)
+
     _this.isPaintedBoolean = true
     _this.isRectPaintingBoolean = false
     // 重绘
@@ -1344,6 +1371,12 @@ function pointPaintingFunc (event) {
     // console.log(_this.canvasMarkDataArray)
     // console.log(_this.canvasMarkDataArray.length - 1)
     // console.log(canvasMarkDataObject)
+    // displayModel -> dataModel
+    // 显示模型的数据 - 数据模型的数据
+    // 用...运算符实现拷贝（不深）
+    const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
+    // painting
     _this.isPointingBoolean = true    
     _this.$Painting_tools.drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
     // drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
@@ -1361,7 +1394,7 @@ function pointPaintingFunc (event) {
     // 检测这一点是否和上一点过近，过近就启动完成判定  
     if (_this.$Painting_tools.checkPointAndPointIsNearFunc(event.offsetX, event.offsetY, prevX, prevY, _this.sqrtStandandNumber)) {
       settlePointFunc(pointDataArray.length)
-    } else {
+    } else {      
       // _this.$set(pointDataArray, 
       //   pointDataArray.length, 
       //   {x: event.offsetX, y: event.offsetY})
@@ -1369,6 +1402,19 @@ function pointPaintingFunc (event) {
         {x: event.offsetX, y: event.offsetY})
       // _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
       setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "update", _this.canvasMarkDataArray.length - 1, null, canvasMarkDataObject)
+      // displayModel -> dataModel
+      // 显示模型的数据 - 数据模型的数据
+      const canvasMarkDataObject_another = _this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1]
+      setCoreObjectArray(
+        canvasMarkDataObject_another.pointDataArray,
+        "pointDataArray",
+        "add", 
+        pointDataArray.length, 
+        null,
+        getCurrentDataModelSinglePointValue({x: event.offsetX, y: event.offsetY}, "connect")
+      )
+      setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "update", _this.anotherCanvasMarkDataArray.length - 1, null, canvasMarkDataObject_another)
+      // painting
       _this.$Painting_tools.drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
       // drawArcFunc(_this.canvasObject, event.offsetX, event.offsetY, r, _this.arcColorString, _this.arcWidthNumber, _this.arcStrokeColorString)
     }       
@@ -1567,10 +1613,24 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
         }
       ]      
       return canvasMarkDataObject
-    } else if (type === "rectangle") {
-
+    } else if (type === "rectangle" || type === "polygon") {
+      const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x * standand_number
+      const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y * standand_number
+      let arr = []
+      let origin_arr = canvasMarkDataObject.pointDataArray
+      origin_arr.forEach((item, index) => {
+        let obj = {}
+        const x = item.x,
+          y = item.y;
+        obj.x = parseInt(x_calc(x))
+        obj.y = parseInt(y_calc(y))
+        arr.push(obj)
+      })
+      origin_arr = null
+      canvasMarkDataObject.pointDataArray = arr
+      return canvasMarkDataObject
     } else if (type === "polygon") {
-
+      return
     }
   }
 }
@@ -1760,9 +1820,13 @@ function settlePointFunc (length) {
   } else {
     let canvasMarkDataObject = _this.canvasMarkDataArray[_this.canvasMarkDataArray.length - 1]
     let pointDataArray = canvasMarkDataObject.pointDataArray
+
+    let canvasMarkDataObject_another = _this.anotherCanvasMarkDataArray[_this.anotherCanvasMarkDataArray.length - 1]
     try {
       _this.$Painting_tools.drawPointLineFunc(_this.canvasObject, pointDataArray, _this.lineColorString, _this.lineWidthNumber)
       drawCenterArcFunc(pointDataArray, canvasMarkDataObject)
+      // 数据模型相关对象注入中心点
+      setAnotherCenterArc(canvasMarkDataObject_another.pointDataArray, canvasMarkDataObject_another)
       // 复制备用对象
       // _this.anotherCanvasMarkDataArray = _this.canvasMarkDataArray
       _this.isPointingBoolean = false    // 正在绘制
@@ -1793,6 +1857,10 @@ function drawCenterArcFunc(pointDataArray, canvasMarkDataObject){
   // ctx.closePath();
   // ctx.stroke()
   // ctx.fill()
+}
+function setAnotherCenterArc(pointDataArray, canvasMarkDataObject){
+  let obj = _this.$Painting_tools.calcCenterInPolygon(pointDataArray, _this.$Tools.compareVal)
+  canvasMarkDataObject.centerPointObject = obj    // 把中心点坐标放进多边形对象
 }
 // 计算多边形中心点坐标
 // function calcCenterInPolygon(pointDataArray, func){
