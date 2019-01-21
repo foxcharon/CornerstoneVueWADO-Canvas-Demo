@@ -88,6 +88,7 @@ cornerstone.registerImageLoader("https", cornerstoneWADOImageLoader.loadImage);
 
 //配置 webWorker (必须配置)
 //注意这里的路径问题  如果路径不对 cornerstoneWADOImageLoaderWebWorker 会报错 index.html Uncaught SyntaxError: Unexpected token <
+// 这个是 dev 环境的路径，如果在 production 环境项目不在服务器根目录，会找不到文件
 var config = {
   webWorkerPath: "/static/dist/cornerstoneWADOImageLoaderWebWorker.js",
   taskConfiguration: {
@@ -96,6 +97,16 @@ var config = {
     }
   }
 };
+// 这个是 production 环境的路径，请根据具体情况进行设置
+// const path = require('path')
+// var config = {
+//   webWorkerPath: path.resolve('cornerstone-demo') + "/static/dist/cornerstoneWADOImageLoaderWebWorker.js",
+//   taskConfiguration: {
+//     decodeTask: {
+//       codecsPath: path.resolve('cornerstone-demo') + "/static/dist/cornerstoneWADOImageLoaderCodecs.js"
+//     }
+//   }
+// };
 cornerstoneWADOImageLoader.webWorkerManager.initialize(config);
 var _this = null
 export default {
@@ -158,7 +169,7 @@ export default {
       viewXYCoordinateObject:{
         x:0,
         y:0
-      },    // 此时源图视窗起始点（左上角）的XY坐标值
+      },    // 此时源图视窗起始点（左上角）的XY坐标值 / 单位
       prototypeXYCoordinateObject:{
         x:0,
         y:0
@@ -343,6 +354,15 @@ export default {
         height:c.height
       }
       this.repeatGetCanvasDataFunc()
+      // 滚轮事件
+      this.$Tools.scrollCommonFunction(window, document)
+      const _this = this
+      window.addWheelListener(this.$refs.canvas, function( e ) { 
+        console.log(e)
+        console.log( e.deltaY );
+        _this.scrollDriveCanvasZoomCalc(e.deltaY, e.offsetX, e.offsetY) 
+        e.preventDefault();
+      })
       // this.canvasOriginObject = this.canvasObject
       // console.log(this.canvasObject)
       // console.log(this.$tools.randomString())
@@ -538,13 +558,100 @@ export default {
     },
     // directionMemoryObject 修正
     directionMemoryObjectRangeCheckFunc(directionMemoryObject, range_obj){
-      console.log(directionMemoryObject, range_obj)
+      // console.log(directionMemoryObject, range_obj)
       directionMemoryObject.x < range_obj.x[0] ? directionMemoryObject.x = parseInt(range_obj.x[0]) : ''
       directionMemoryObject.y < range_obj.y[0] ? directionMemoryObject.y = parseInt(range_obj.y[0]) : ''
       directionMemoryObject.x > range_obj.x[1] ? directionMemoryObject.x = parseInt(range_obj.x[1]) : ''
       directionMemoryObject.y > range_obj.y[1] ? directionMemoryObject.y = parseInt(range_obj.y[1]) : ''
-      console.log(directionMemoryObject)
+      // console.log(directionMemoryObject)
       return directionMemoryObject
+    },
+    // 滚轮放大图片计算
+    // deltaY 滚轮值 offsetX 鼠标横坐标 offsetY 鼠标纵坐标
+    scrollDriveCanvasZoomCalc(deltaY, offsetX, offsetY){
+      console.log("scrollDriveCanvasZoomCalc")
+      // displayModel 坐标 -> dataModel坐标 必须在其他计算之前
+      const w = this.canvasOriginSizeObject.width,
+        h = this.canvasOriginSizeObject.height,
+        standand = this.directionStandandValueNumber;
+      const data_model_coor = getCurrentDataModelSinglePointValue({
+        x:offsetX,
+        y:offsetY
+      }, "connect")
+      console.log(data_model_coor)
+      // 视图中心点坐标
+      const canvas_center = {
+        x: w / 2,
+        y: h / 2
+      }      
+      // deltaY < 0 放大 deltaY > 0 缩小
+      // 计算now_zoom_number
+      let now_zoom_number;
+      const prev_zoom_number = this.zoomIndexNumber,
+        zoom_min = 0,
+        zoom_max = this.zoomNumberArray.length - 1;
+      const plus = x => x + 1;
+      const sub = x => x - 1;
+      const range_max_func = x => x > zoom_max ? zoom_max : x;
+      const range_min_func = x => x < zoom_min ? zoom_min : x;
+      deltaY < 0 ? now_zoom_number = range_max_func(plus(prev_zoom_number)) : '';
+      deltaY > 0 ? now_zoom_number = range_min_func(sub(prev_zoom_number)) : '';
+      // console.log(now_zoom_number)
+      // 计算之后的值赋值给zoomIndexNumber
+      this.zoomIndexNumber = now_zoom_number
+      const zoom = this.zoomNumberArray[this.zoomIndexNumber];
+      // 相当于点了几次方向键？
+      // 需要考虑放大之后 要减去鼠标的dataModelCoor与中心点dataModelCoor的差值
+      // console.log(data_model_coor.x)
+      // console.log(canvas_center.x)
+      // console.log((data_model_coor.x - canvas_center.x) / now_zoom_number)
+      // 计算finalX finalY
+      let final_coor_x = offsetX,
+        final_coor_y = offsetY;
+      let test_x = final_coor_x + ((offsetX - canvas_center.x) / zoom)
+      let test_y = final_coor_y + ((offsetY - canvas_center.y) / zoom)
+      console.log(test_x - final_coor_x)
+      console.log(data_model_coor.x - canvas_center.x)
+      if (deltaY < 0) {
+        this.directionMemoryObject = {
+          x:parseInt(
+              (data_model_coor.x - canvas_center.x - (test_x - final_coor_x)) / standand
+            ),
+          y:parseInt(
+              (data_model_coor.y - canvas_center.y - (test_y - final_coor_y) ) / standand
+            ),
+        }
+      } else {
+        this.directionMemoryObject = {
+          x:parseInt(
+              (data_model_coor.x - canvas_center.x) / standand
+            ),
+          y:parseInt(
+              (data_model_coor.y - canvas_center.y) / standand
+            ),
+        }
+      }
+      console.log(this.directionMemoryObject)
+      // 方向键范围校验
+      const dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, this.getDirectionNumberRange());
+      // 计算原型坐标      
+      let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
+        viewXYCoordinateObject = this.viewXYCoordinateObject,
+        now_w = parseInt(w / zoom),
+        now_h = parseInt(h / zoom);
+      prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
+      prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)      
+      // final_coor_x - test_x
+      // final_coor_y - test_y
+      const final_coor = {
+        x:prototypeXYCoordinateObject.x + dmo.x * standand,
+        y:prototypeXYCoordinateObject.y + dmo.y * standand
+      }
+      // console.log(prototypeXYCoordinateObject)
+      viewXYCoordinateObject.x = dmo.x
+      viewXYCoordinateObject.y = dmo.y
+      // render
+      this.renderAfterZoomChange(final_coor.x, final_coor.y, w, h, now_w, now_h)
     },
     // 计算相关值
     calcNowSourceWidthHeightFunc(){
@@ -557,7 +664,7 @@ export default {
         zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
       let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
         viewXYCoordinateObject = this.viewXYCoordinateObject;
-      console.log("?", dmo)
+      // console.log("?", dmo)
       // 计算现在用的源图片宽高 源图片初始点坐标
       let now_w = parseInt(w / zoom_number),
         now_h = parseInt(h / zoom_number),
@@ -567,8 +674,8 @@ export default {
       // (w - now_w) / 2,  (h - now_h) / 2 原型值：没有点过方向键时xy的值
       prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
       prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)
-      console.log(prototypeXYCoordinateObject)
-      console.log(this.prototypeXYCoordinateObject)
+      // console.log(prototypeXYCoordinateObject)
+      // console.log(this.prototypeXYCoordinateObject)
       // 检查xy的值是否超出范围
       let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
       // x1 === 0 ? this.checkDirectionMemoryObject(x1, 0, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
@@ -619,6 +726,7 @@ export default {
           let img = new Image()
           img.src = e.target.result
           img.id = "abc"
+          // img.crossOrigin = "Anonymous"
           // console.log(img)
           img.style.display = "none"
           // img注入进DOM
