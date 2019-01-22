@@ -160,7 +160,7 @@ export default {
       polygonLatingAndFormingIsDisconnectedBoolean:false,    // 鼠标拖动或拉伸多边形时与多边形失去连接
       isRectPaintingBoolean:false,    // 是否正在绘制矩形
       isEllipsePaintingBoolean:false,    // 是否正在绘制椭圆
-      zoomNumberArray:[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],    // 放大倍数数组
+      zoomNumberArray:[1, 2, 3, 4, 5],    // 放大倍数数组
       zoomIndexNumber:0,    // 此时处于哪个放大倍数
       directionMemoryObject:{
         x:0,
@@ -174,6 +174,25 @@ export default {
         x:0,
         y:0
       },    // XY坐标原型值（如果没有点任何方向键，此时XY坐标值是多少）
+      displayCenterXYCoordinateObject:{
+        x:0,
+        y:0
+      },    // 视图的中心点的坐标
+      scrollViewCoorObject:{
+        x:0,
+        y:0
+      },   // 此时源图视窗起始点（左上角）的XY坐标值
+      buttonViewCoorObject:{
+        x:0,
+        y:0
+      },   // 此时源图视窗起始点（左上角）的XY坐标值
+      scrollPXYcObject:null,    // 滚轮用
+      scrollBaseObject:{
+        deltaY:0,
+        offsetX:0,
+        offsetY:0
+      },
+      scrollBaseBoolean:true,
       directionStandandValueNumber:10    // 点1下移动几个像素
       // EDIT END
     };
@@ -279,9 +298,9 @@ export default {
       };
 
       // Enable Inputs
-      cornerstoneTools.mouseInput.enable(canvas);
-      cornerstoneTools.mouseWheelInput.enable(canvas);
-      cornerstoneTools.touchInput.enable(canvas);
+      // cornerstoneTools.mouseInput.enable(canvas);
+      // cornerstoneTools.mouseWheelInput.enable(canvas);
+      // cornerstoneTools.touchInput.enable(canvas);
 
       // Set the stack as tool state
       cornerstoneTools.addStackStateManager(canvas, ["stack"]);
@@ -358,31 +377,24 @@ export default {
       this.$Tools.scrollCommonFunction(window, document)
       const _this = this
       window.addWheelListener(this.$refs.canvas, function( e ) { 
-        console.log(e)
-        console.log( e.deltaY );
-        _this.scrollDriveCanvasZoomCalc(e.deltaY, e.offsetX, e.offsetY) 
+        // console.log(e)
+        // console.log( e.deltaY );
+        if (!_this.scrollBaseBoolean) {
+          return
+        }
+        _this.scrollBaseObject = {
+          deltaY:e.deltaY,
+          offsetX:e.offsetX,
+          offsetY:e.offsetY
+        }
+        _this.scrollBaseBoolean = false
+        window.setTimeout(()=>{
+          _this.scrollDriveCanvasZoomCalc(_this.scrollBaseObject.deltaY, _this.scrollBaseObject.offsetX, _this.scrollBaseObject.offsetY)
+          _this.scrollBaseBoolean = true
+        },100)        
         e.preventDefault();
       })
-      // this.canvasOriginObject = this.canvasObject
-      // console.log(this.canvasObject)
-      // console.log(this.$tools.randomString())
-      // console.log($)
-      // this.canvasObject.save()
-      // this.canvasOriginObject.save()
-      // this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, 526, 526)
-      // console.log(this.canvasOriginDataObject)
-      // setTimeout(()=>{
-        // this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, 526, 526)
-        // console.log(this.canvasOriginDataObject)
-        // console.log(new Date().getTime())
-        // this.canvasOriginDataObject.forEach((data, index)=>{
-        // })
-        // console.log(new Date().getTime())
-      // },100)
-      // this.$nextTick(function(){
-      //   this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, 526, 526)
-      //   console.log(this.canvasOriginDataObject)
-      // })
+      
     },
     repeatGetCanvasDataFunc(){
       // console.log("repeatGetCanvasDataFunc")
@@ -516,28 +528,28 @@ export default {
       const change = obj => ({y:obj.y - 1, x:obj.x})
       this.directionMemoryObject = change(this.directionMemoryObject)
       // console.log(this.directionMemoryObject)
-      this.calcNowSourceWidthHeightFunc()
+      this.calcNowSourceWidthHeightFunc('up')
     },
     // 左方向键
     directionLeftFunc(){
       const change = obj => ({y:obj.y, x:obj.x - 1})
       this.directionMemoryObject = change(this.directionMemoryObject)
       // console.log(this.directionMemoryObject)
-      this.calcNowSourceWidthHeightFunc()
+      this.calcNowSourceWidthHeightFunc('left')
     },
     // 右方向键
     directionRightFunc(){
       const change = obj => ({y:obj.y, x:obj.x + 1})
       this.directionMemoryObject = change(this.directionMemoryObject)
       // console.log(this.directionMemoryObject)
-      this.calcNowSourceWidthHeightFunc()
+      this.calcNowSourceWidthHeightFunc('right')
     },
     // 下方向键
     directionBottomFunc(){
       const change = obj => ({y:obj.y + 1, x:obj.x})
       this.directionMemoryObject = change(this.directionMemoryObject)
       // console.log(this.directionMemoryObject)
-      this.calcNowSourceWidthHeightFunc()
+      this.calcNowSourceWidthHeightFunc('down')
     },
     // 获取方向键对象取值范围
     getDirectionNumberRange(){
@@ -566,30 +578,59 @@ export default {
       // console.log(directionMemoryObject)
       return directionMemoryObject
     },
+    getDisplayCenterSingleFunc(data_model_value, display_model_value, zoom, w){
+      const answer = data_model_value - (display_model_value / zoom) + (w / (2*zoom))
+      return answer
+    },
+    // 滚轮用
+    // 计算dataModel
+    getDataModelValueInScroll(coor, scrollViewCoorObject, zoom){
+      console.log(coor, zoom)
+      if (zoom === 1) {
+        return coor
+      } else {
+        console.log(scrollViewCoorObject)
+        console.log(parseInt(coor.x / zoom))
+        console.log(scrollViewCoorObject.x + parseInt(coor.x / zoom))
+        return {
+          x:scrollViewCoorObject.x + parseInt(coor.x / zoom),
+          y:scrollViewCoorObject.y + parseInt(coor.y / zoom)
+        }
+      }
+    },
+    // 计算原型坐标
+    calcPrototypeXYCoordinateObjectFunc(w, h, zoom){
+      let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
+        now_w = parseInt(w / zoom),
+        now_h = parseInt(h / zoom);
+      prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
+      prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)      
+    },
+    // 计算原型坐标和现坐标的偏差值
+    calcSubAboutPrototypeAndNowCoorFunc(prototype, scroll){
+      this.viewXYCoordinateObject = {
+        x:scroll.x - prototype.x,
+        y:scroll.y - prototype.y
+      }
+      return {
+        x:scroll.x - prototype.x,
+        y:scroll.y - prototype.y
+      }
+    },
     // 滚轮放大图片计算
     // deltaY 滚轮值 offsetX 鼠标横坐标 offsetY 鼠标纵坐标
     scrollDriveCanvasZoomCalc(deltaY, offsetX, offsetY){
       console.log("scrollDriveCanvasZoomCalc")
-      // displayModel 坐标 -> dataModel坐标 必须在其他计算之前
-      const w = this.canvasOriginSizeObject.width,
-        h = this.canvasOriginSizeObject.height,
-        standand = this.directionStandandValueNumber;
-      const data_model_coor = getCurrentDataModelSinglePointValue({
-        x:offsetX,
-        y:offsetY
-      }, "connect")
-      console.log(data_model_coor)
-      // 视图中心点坐标
-      const canvas_center = {
-        x: w / 2,
-        y: h / 2
-      }      
       // deltaY < 0 放大 deltaY > 0 缩小
       // 计算now_zoom_number
       let now_zoom_number;
       const prev_zoom_number = this.zoomIndexNumber,
         zoom_min = 0,
         zoom_max = this.zoomNumberArray.length - 1;
+      // 如果已到最小还想缩小，或者已到最大还想变大，就拒绝
+      if ((deltaY > 0 && prev_zoom_number === zoom_min)||(deltaY < 0 && prev_zoom_number === zoom_max)) {
+        return
+      }      
       const plus = x => x + 1;
       const sub = x => x - 1;
       const range_max_func = x => x > zoom_max ? zoom_max : x;
@@ -600,61 +641,153 @@ export default {
       // 计算之后的值赋值给zoomIndexNumber
       this.zoomIndexNumber = now_zoom_number
       const zoom = this.zoomNumberArray[this.zoomIndexNumber];
-      // 相当于点了几次方向键？
-      // 需要考虑放大之后 要减去鼠标的dataModelCoor与中心点dataModelCoor的差值
-      // console.log(data_model_coor.x)
-      // console.log(canvas_center.x)
-      // console.log((data_model_coor.x - canvas_center.x) / now_zoom_number)
-      // 计算finalX finalY
-      let final_coor_x = offsetX,
-        final_coor_y = offsetY;
-      let test_x = final_coor_x + ((offsetX - canvas_center.x) / zoom)
-      let test_y = final_coor_y + ((offsetY - canvas_center.y) / zoom)
-      console.log(test_x - final_coor_x)
-      console.log(data_model_coor.x - canvas_center.x)
-      if (deltaY < 0) {
-        this.directionMemoryObject = {
-          x:parseInt(
-              (data_model_coor.x - canvas_center.x - (test_x - final_coor_x)) / standand
-            ),
-          y:parseInt(
-              (data_model_coor.y - canvas_center.y - (test_y - final_coor_y) ) / standand
-            ),
-        }
-      } else {
-        this.directionMemoryObject = {
-          x:parseInt(
-              (data_model_coor.x - canvas_center.x) / standand
-            ),
-          y:parseInt(
-              (data_model_coor.y - canvas_center.y) / standand
-            ),
-        }
-      }
-      console.log(this.directionMemoryObject)
-      // 方向键范围校验
-      const dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, this.getDirectionNumberRange());
-      // 计算原型坐标      
-      let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
-        viewXYCoordinateObject = this.viewXYCoordinateObject,
-        now_w = parseInt(w / zoom),
+      // x10 相对于1倍率的横坐标 y10 相对于1倍率的纵坐标
+      // x20 相对于将要发生的倍率的横坐标 y20 相对于将要发生的倍率的纵坐标
+      const data_model_coor = this.getDataModelValueInScroll({
+        x:offsetX,
+        y:offsetY
+      }, this.scrollViewCoorObject, this.zoomNumberArray[prev_zoom_number])
+      console.log(data_model_coor.x)
+      const x10 = data_model_coor.x,
+        y10 = data_model_coor.y;      
+      const x20 = parseInt(x10 / zoom),
+        y20 = parseInt(y10 / zoom);
+      const x00 = x10 - x20,
+        y00 = y10 - y20;
+      const w = this.canvasOriginSizeObject.width,
+        h = this.canvasOriginSizeObject.height,
+        standand = this.directionStandandValueNumber;
+      const now_w = parseInt(w / zoom),
         now_h = parseInt(h / zoom);
-      prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
-      prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)      
-      // final_coor_x - test_x
-      // final_coor_y - test_y
-      const final_coor = {
-        x:prototypeXYCoordinateObject.x + dmo.x * standand,
-        y:prototypeXYCoordinateObject.y + dmo.y * standand
+      let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x00, y00, w - now_w, h - now_h)
+      console.log(x10, x20, x00)
+      console.log(x00, y00, w, h, now_w, now_h)
+      // 记录此时的初始点坐标，方便下次使用
+      this.scrollViewCoorObject = {
+        x:x1,
+        y:y1
+      }      
+      // 计算原型坐标
+      this.calcPrototypeXYCoordinateObjectFunc(w, h, zoom)
+      // 计算原型坐标和现坐标的偏差值
+      const dmoOrigin = this.calcSubAboutPrototypeAndNowCoorFunc(this.prototypeXYCoordinateObject, this.scrollViewCoorObject)
+      // 重设方向键记录
+      this.directionMemoryObject = {
+        x:parseInt(dmoOrigin.x / standand),
+        y:parseInt(dmoOrigin.y / standand)
       }
-      // console.log(prototypeXYCoordinateObject)
-      viewXYCoordinateObject.x = dmo.x
-      viewXYCoordinateObject.y = dmo.y
-      // render
-      this.renderAfterZoomChange(final_coor.x, final_coor.y, w, h, now_w, now_h)
+      // 调用渲染
+      this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h, 'scroll')
+      // // displayModel 坐标 -> dataModel坐标 必须在其他计算之前
+      // const w = this.canvasOriginSizeObject.width,
+      //   h = this.canvasOriginSizeObject.height,
+      //   standand = this.directionStandandValueNumber;
+      // const data_model_coor = getCurrentDataModelSinglePointValue({
+      //   x:offsetX,
+      //   y:offsetY
+      // }, "connect")
+      // // console.log(data_model_coor)
+      // // 视图中心点坐标
+      // const canvas_center = {
+      //   x: w / 2,
+      //   y: h / 2
+      // }
+      // const display_center = this.displayCenterXYCoordinateObject
+      // // deltaY < 0 放大 deltaY > 0 缩小
+      // // 计算now_zoom_number
+      // let now_zoom_number;
+      // const prev_zoom_number = this.zoomIndexNumber,
+      //   zoom_min = 0,
+      //   zoom_max = this.zoomNumberArray.length - 1;
+      // // 如果已到最小还想缩小，或者已到最大还想变大，就拒绝
+      // if ((deltaY > 0 && prev_zoom_number === zoom_min)||(deltaY < 0 && prev_zoom_number === zoom_max)) {
+      //   return
+      // }
+      // // 如果prev_zoom_number为0，则display_center就是canvas_center
+      // if (prev_zoom_number === 0) {
+      //   display_center.x = canvas_center.x
+      //   display_center.y = canvas_center.y
+      // }
+      // const plus = x => x + 1;
+      // const sub = x => x - 1;
+      // const range_max_func = x => x > zoom_max ? zoom_max : x;
+      // const range_min_func = x => x < zoom_min ? zoom_min : x;
+      // deltaY < 0 ? now_zoom_number = range_max_func(plus(prev_zoom_number)) : '';
+      // deltaY > 0 ? now_zoom_number = range_min_func(sub(prev_zoom_number)) : '';
+      // // console.log(now_zoom_number)
+      // // 计算之后的值赋值给zoomIndexNumber
+      // this.zoomIndexNumber = now_zoom_number
+      // const zoom = this.zoomNumberArray[this.zoomIndexNumber];
+      // // 相当于点了几次方向键？
+      // // 需要考虑放大之后 要减去鼠标的dataModelCoor与中心点dataModelCoor的差值
+      // // console.log(data_model_coor.x)
+      // // console.log(canvas_center.x)
+      // // console.log((data_model_coor.x - canvas_center.x) / now_zoom_number)
+      // // 计算finalX finalY
+      // let final_coor_x = offsetX,
+      //   final_coor_y = offsetY;
+      // let test_x = offsetX + ((offsetX - display_center.x) / zoom)
+      // let test_y = offsetY + ((offsetY - display_center.y) / zoom)
+      // // console.log(test_x - final_coor_x)
+      // // console.log(data_model_coor.x - canvas_center.x)
+      // let display_answer = {
+      //   x:this.getDisplayCenterSingleFunc(data_model_coor.x, offsetX, zoom, w),
+      //   y:this.getDisplayCenterSingleFunc(data_model_coor.y, offsetY, zoom, w)
+      // }
+      // if (deltaY < 0) {
+      //   this.directionMemoryObject = {
+      //     x:
+      //         (data_model_coor.x - canvas_center.x - (offsetX - display_center.x) / zoom) / standand
+      //       ,
+      //     y:
+      //         (data_model_coor.y - canvas_center.y - (offsetY - display_center.y) / zoom) / standand
+      //       ,
+      //   }
+      // } else {
+      //   this.directionMemoryObject = {
+      //     x:
+      //         (data_model_coor.x - canvas_center.x - (offsetX - display_center.x) / zoom) / standand
+      //       ,
+      //     y:
+      //         (data_model_coor.y - canvas_center.y - (offsetY - display_center.y) / zoom) / standand
+      //       ,
+      //   }
+      // }
+      
+      
+      // // console.log(data_model_coor.x, offsetX, zoom, w)
+      // // console.log(this.getDisplayCenterSingleFunc(data_model_coor.x, offsetX, zoom, w))
+      // // console.log("display_center.x", data_model_coor.x - (offsetX - display_center.x) / zoom)
+      // // console.log(data_model_coor.x - canvas_center.x - (test_x - final_coor_x))
+      // // console.log(this.directionMemoryObject)
+      // // 方向键范围校验
+      // const dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, this.getDirectionNumberRange());
+      // // 计算原型坐标      
+      // let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
+      //   viewXYCoordinateObject = this.viewXYCoordinateObject,
+      //   now_w = parseInt(w / zoom),
+      //   now_h = parseInt(h / zoom);
+      // prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
+      // prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)      
+      // // final_coor_x - test_x
+      // // final_coor_y - test_y
+      // const final_coor = {
+      //   x:prototypeXYCoordinateObject.x + dmo.x * standand,
+      //   y:prototypeXYCoordinateObject.y + dmo.y * standand
+      // }
+      // // console.log(prototypeXYCoordinateObject)
+      // viewXYCoordinateObject.x = dmo.x
+      // viewXYCoordinateObject.y = dmo.y
+      // // render
+      // this.renderAfterZoomChange(final_coor.x, final_coor.y, w, h, now_w, now_h)
+
+      // display_center.x = display_answer.x,
+      // display_center.y = display_answer.y      
+      // console.log("===")
+      // console.log(display_answer.x, display_answer.y)
     },
     // 计算相关值
-    calcNowSourceWidthHeightFunc(){
+    calcNowSourceWidthHeightFunc(type){
       const range_obj = this.getDirectionNumberRange()
       // 获取初始宽高 放大倍数
       const w = this.canvasOriginSizeObject.width,
@@ -685,15 +818,37 @@ export default {
       // 方向键点击数修正
       
       // ???
-      console.log(x1, y1, prototypeXYCoordinateObject.y, standand, w)
-      viewXYCoordinateObject.x = dmo.x
-      viewXYCoordinateObject.y = dmo.y
+      // console.log(x1, y1, prototypeXYCoordinateObject.y, standand, w)
+      viewXYCoordinateObject.x = dmo.x * standand
+      viewXYCoordinateObject.y = dmo.y * standand
+      console.log("===820===", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
       // viewXYCoordinateObject = {
       //   x: x1,
       //   y: y1
       // }
       console.log("dmo", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
-      this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h)
+      this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h, "button")
+      // 计算scrollViewCoorObject
+      this.scrollViewCoorObject = ((type) => {
+        const _self = this.scrollViewCoorObject
+        console.log("_self", _self)
+        let x_mixin = 0,
+          y_mixin = 0;
+        if (type === 'up') {
+          y_mixin = -10
+        } else if (type === 'down') {
+          y_mixin = 10
+        } else if (type === 'left') {
+          x_mixin = -10
+        } else if (type === 'right') {
+          x_mixin = 10
+        }
+        return {
+          x:_self.x + x_mixin,
+          y:_self.y + y_mixin,
+        }
+      })(type)
+      console.log(this.scrollViewCoorObject)
     },
     // 检查XY是否在合法范围内
     checkXYCurrentFunc(x, y, x_max_stand, y_max_stand){
@@ -710,7 +865,7 @@ export default {
       obj[key] = parseInt((value - stand) / directionStandandValueNumber)
     },
     // 渲染
-    renderAfterZoomChange(x, y, w, h, now_w, now_h){
+    renderAfterZoomChange(x, y, w, h, now_w, now_h, ui_type){
       const _this = this
       // this.canvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
       let hideCanvasHTML = document.getElementsByTagName("canvas")[1]
@@ -727,7 +882,7 @@ export default {
           img.src = e.target.result
           img.id = "abc"
           // img.crossOrigin = "Anonymous"
-          // console.log(img)
+          // console.log(img.src)
           img.style.display = "none"
           // img注入进DOM
           document.body.appendChild(img)
@@ -742,7 +897,7 @@ export default {
             // 记录zoomOriginData
             _this.canvasOriginZoomDataObject = ctx.getImageData(0, 0, w, h)
             // 重计算displayModel
-            _this.resetDisplayModelFunc()
+            _this.resetDisplayModelFunc(ui_type)
             // 重绘
             _this.reDrawFunc()
             // img从DOM中移除
@@ -751,19 +906,8 @@ export default {
         }
       })
     },
-    // 重设显示模型的数据
-    resetDisplayModelFunc(){
-      const range_obj = this.getDirectionNumberRange()
-      // pXYc 当前倍率下的原型点位置 dmo 点了几次方向键 standand 移动单位标准值
-      const pXYc = this.prototypeXYCoordinateObject,
-        dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, range_obj),
-        standand = this.directionStandandValueNumber,
-        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
-      // pXYc + dmo*standand = pXYcWithOffset 偏差原型值（原型值 + 移动偏差值）
-      const pXYcWithOffset = {
-        x:pXYc.x + dmo.x * standand,
-        y:pXYc.y + dmo.y * standand
-      }
+    // 重设显示模型的数据 核心
+    resetDisplayModelCoreFunc(pXYcWithOffset, zoom_number){
       let canvasMarkDataArray = this.canvasMarkDataArray
       this.anotherCanvasMarkDataArray.forEach((item, index, this_arr) => {
         if (true) {
@@ -807,16 +951,31 @@ export default {
           })
           // set
           setCoreObjectArray(canvasMarkDataArray[index], "canvasMarkDataObject", "update", 0, "pointDataArray", new_point_arr)
-        } else if (item.type === "ellipse") {
-          return
-        } else if (item.type === "rectangle") {
-          return
-        } else if (item.type === "polygon") {
-          return
-        } else {
-          console.warn("resetDisplayModelFunc TYPE ERROR")
         }
       })
+    },
+    // 重设显示模型的数据
+    resetDisplayModelFunc(ui_type){
+      const range_obj = this.getDirectionNumberRange()
+      // pXYc 当前倍率下的原型点位置 dmo 点了几次方向键 standand 移动单位标准值
+      const pXYc = this.prototypeXYCoordinateObject,
+        vXYc = this.viewXYCoordinateObject,
+        dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, range_obj),
+        standand = this.directionStandandValueNumber,
+        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+      // pXYc + dmo*standand = pXYcWithOffset 偏差原型值（原型值 + 移动偏差值）
+      let pXYcWithOffset = {
+        x:pXYc.x + vXYc.x,
+        y:pXYc.y + vXYc.y
+      }
+      // if (ui_type === "scroll") {
+      //   pXYcWithOffset = {
+      //     x:pXYc.x + this.scrollPXYcObject.x,
+      //     y:pXYc.y + this.scrollPXYcObject.y
+      //   }
+      //   console.log(pXYc.x, this.scrollPXYcObject.x)
+      // }
+      this.resetDisplayModelCoreFunc(pXYcWithOffset, zoom_number)      
     }
     // getXYMaxMinPointFunc(arr, index){
     //   return arr[index]
@@ -842,14 +1001,6 @@ export default {
     },
     // 色彩滤镜选项
     selectColorFilterString:function(new_value, old_value){
-      // console.log(JSON.parse(JSON.stringify({width:111,height:[111,222,333]})))
-      // let new_color_obj = JSON.parse(JSON.stringify(this.canvasOriginDataObject));
-      // console.log(JSON.stringify(this.canvasOriginDataObject))
-      // let new_color_obj = {
-      //   width:this.canvasOriginDataObject.width,
-      //   height:this.canvasOriginDataObject.height,
-      //   data:this.canvasOriginDataObject.data
-      // }
       function aaa(element, index, array) {
         return element >= 0;
       }
@@ -1697,8 +1848,8 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
       // C = B + (方向键值 * 方向值单位)
       console.log(_this.prototypeXYCoordinateObject)
       console.log(proto_obj.x, center_x / zoom_number, view_coordinate.x * standand_number)
-      const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x * standand_number
-      const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y * standand_number
+      const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x
+      const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y
       const obj = {
         center_x: parseInt(x_calc(center_x)),
         center_y: parseInt(y_calc(center_y))
@@ -1722,8 +1873,8 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
       ]      
       return canvasMarkDataObject
     } else if (type === "rectangle" || type === "polygon") {
-      const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x * standand_number
-      const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y * standand_number
+      const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x
+      const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y
       let arr = []
       let origin_arr = canvasMarkDataObject.pointDataArray
       origin_arr.forEach((item, index) => {
@@ -1762,8 +1913,8 @@ function getCurrentDataModelSinglePointValue(singlePointObject, type){
     let x, y
     type === "connect" ? x = singlePointObject.x : x = singlePointObject.center_x
     type === "connect" ? y = singlePointObject.y : y = singlePointObject.center_y
-    const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x * standand_number
-    const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y * standand_number
+    const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x
+    const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y
     let obj
     type === "connect" ? obj = {x:parseInt(x_calc(x)), y:parseInt(y_calc(y))} : obj = {center_x:parseInt(x_calc(x)), center_y:parseInt(y_calc(y))}
     // type === "center" ? obj = {center_x:x_calc(x), center_y:y_calc(y)} : ''
