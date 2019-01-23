@@ -5,7 +5,7 @@
       <!-- DICOM CANVAS -->
         <span id="loadProgress">Diocm加载: </span>
         <!-- <div> -->
-          <div ref="canvas" class="image-canvas" oncontextmenu="return false"></div>
+          <div ref="canvas" class="image-canvas" oncontextmenu="return false" tabindex="-1"></div>
         <!-- </div> -->
     </div>
 
@@ -201,7 +201,9 @@ export default {
       mouseMiddleMoveStartCoorObject:null,
       mouseMiddleMoveEndCoorObject:null,
       moveImageCanvasFuncRuningStatusBoolean:false,
-      directionStandandValueNumber:10    // 点1下移动几个像素
+      directionStandandValueNumber:10,    // 点1下移动几个像素
+      keyEventBaseBoolean:true,    // 键盘是否生效
+      keyEventObject:0,
       // EDIT END
     };
   },
@@ -534,43 +536,55 @@ export default {
       this.zoomIndexNumber = min(sub(this.zoomIndexNumber))
       this.calcNowSourceWidthHeightFunc()
     },
+    // 计算方向键公共值
+    directionCommonValueFunc(event){
+      if (event.keyCode) {
+        if (event.shiftKey) {
+          return 1
+        } else {
+          return this.directionStandandValueNumber
+        }
+      } else {
+        return this.directionStandandValueNumber
+      }
+    },
     // 上方向键
-    directionTopFunc(){
-      const number = this.directionStandandValueNumber
+    directionTopFunc(event){
+      const number = this.directionCommonValueFunc(event)
       const change = obj => ({y:obj.y - number, x:obj.x})
       this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('up')
     },
     // 左方向键
-    directionLeftFunc(){
-      const number = this.directionStandandValueNumber
+    directionLeftFunc(event){
+      const number = this.directionCommonValueFunc(event)
       const change = obj => ({y:obj.y, x:obj.x - number})
       this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('left')
     },
     // 右方向键
-    directionRightFunc(){
-      const number = this.directionStandandValueNumber
+    directionRightFunc(event){
+      const number = this.directionCommonValueFunc(event)
       const change = obj => ({y:obj.y, x:obj.x + number})
       this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('right')
     },
     // 下方向键
-    directionBottomFunc(){
-      const number = this.directionStandandValueNumber
+    directionBottomFunc(event){
+      const number = this.directionCommonValueFunc(event)
       const change = obj => ({y:obj.y + number, x:obj.x})
       this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('down')
     },
     // 获取差值坐标取值范围
     checkViewCoorRangeFunc(obj){
-      console.log(obj)
-      console.log(obj.x)
+      // console.log(obj)
+      // console.log(obj.x)
       const standand = {
         x:[-this.prototypeXYCoordinateObject.x,this.prototypeXYCoordinateObject.x],
         y:[-this.prototypeXYCoordinateObject.y,this.prototypeXYCoordinateObject.y]
       }
-      console.log(standand['x'][0])
+      // console.log(standand['x'][0])
       obj.x < standand['x'][0] ? obj.x = standand['x'][0] : ''
       obj.x > standand['x'][1] ? obj.x = standand['x'][1] : ''
       obj.y < standand['y'][0] ? obj.y = standand['y'][0] : ''
@@ -1418,6 +1432,46 @@ function painting() {
             _this.mouseMiddleStatusBoolean = false            
           }
         })
+    // onkeydown 键盘事件
+    $(document).keydown(function(event){
+      // console.log(event)
+      if (!_this.keyEventBaseBoolean) {
+        return
+      }
+      _this.keyEventBaseBoolean = false
+      _this.keyEventObject = event
+      setTimeout(() => {
+        keydownEventSwitchFunc(event)
+        _this.keyEventBaseBoolean = true
+      },30)
+    })
+}
+// 键盘事件分发
+function keydownEventSwitchFunc(event){
+  // w 87 up
+  if (event.keyCode === 87) {
+    _this.directionTopFunc(event)
+  }
+  // s 83 down
+  if (event.keyCode === 83) {
+    _this.directionBottomFunc(event)
+  }
+  // d 68 right
+  if (event.keyCode === 68) {
+    _this.directionRightFunc(event)
+  }
+  // a 65 left
+  if (event.keyCode === 65) {
+    _this.directionLeftFunc(event)
+  }
+  // + 187 add zoom
+  if (event.keyCode === 187) {
+    _this.zoomPlusFunc()
+  }
+  // - 189 sub zoom 
+  if (event.keyCode === 189) {
+    _this.zoomSubFunc()
+  }
 }
 // 计算两点距离公共方法
 // x0 y0 鼠标此时的坐标 x1 y1 参照点的坐标
