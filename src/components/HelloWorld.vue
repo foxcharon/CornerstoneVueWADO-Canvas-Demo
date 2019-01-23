@@ -20,6 +20,7 @@
       <div>
         <p>图片放大缩小</p>
         <button @click="zoomPlusFunc"> + </button> <button @click="zoomSubFunc"> - </button>
+        <p>移动单位<count @changeCount="changeCountFunc($event)" :count="directionStandandValueNumber"/></p>
         <p>图片位置控制</p>
         <div class="direction-control">
           <div></div>
@@ -30,15 +31,15 @@
           <div @click="directionRightFunc"></div>
           <div></div>
           <div @click="directionBottomFunc"></div>
-          <div></div>
+          <div></div>          
         </div>
       </div>
-      <ul v-if="canvasMarkDataArray[0]">
+      <!-- <ul v-if="canvasMarkDataArray[0]">
         <p>数组最新对象的连接点坐标数值</p>
         <li v-for="(item,index) in canvasMarkDataArray[ canvasMarkDataArray.length-1 ].pointDataArray">
           {{ item.x + "-" + item.y }}
         </li>
-      </ul>
+      </ul> -->
       <button @click="submitTestFunc">selectValueString</button>
       <button @click="clearAllDataFunc">clear</button>
       <button @click="moveTestFunc">move</button>
@@ -109,6 +110,9 @@ var config = {
 // };
 cornerstoneWADOImageLoader.webWorkerManager.initialize(config);
 var _this = null
+
+// 组件
+import count from "./count";
 export default {
   name: "HelloWorld",
   data() {
@@ -400,6 +404,11 @@ export default {
       })
       
     },
+    // 计数器
+    changeCountFunc($event){
+      // console.log($event)
+      this.directionStandandValueNumber = $event
+    },
     repeatGetCanvasDataFunc(){
       // console.log("repeatGetCanvasDataFunc")
       const width = this.canvasSizeObject.width, height = this.canvasSizeObject.height
@@ -514,8 +523,7 @@ export default {
       const limit = this.zoomNumberArray.length - 1
       const plus = x => x + 1;
       const max = x => x > limit ? limit : x;
-      this.zoomIndexNumber = max(plus(this.zoomIndexNumber))  
-      // console.log(this.zoomIndexNumber)
+      this.zoomIndexNumber = max(plus(this.zoomIndexNumber)) 
       this.calcNowSourceWidthHeightFunc()
     },
     // 缩小图片入口
@@ -523,37 +531,51 @@ export default {
       const limit = 0
       const sub = x => x - 1;
       const min = x => x < limit ? limit : x;
-      this.zoomIndexNumber = min(sub(this.zoomIndexNumber))  
-      // console.log(this.zoomIndexNumber)
+      this.zoomIndexNumber = min(sub(this.zoomIndexNumber))
       this.calcNowSourceWidthHeightFunc()
     },
     // 上方向键
     directionTopFunc(){
-      const change = obj => ({y:obj.y - 1, x:obj.x})
-      this.directionMemoryObject = change(this.directionMemoryObject)
-      // console.log(this.directionMemoryObject)
+      const number = this.directionStandandValueNumber
+      const change = obj => ({y:obj.y - number, x:obj.x})
+      this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('up')
     },
     // 左方向键
     directionLeftFunc(){
-      const change = obj => ({y:obj.y, x:obj.x - 1})
-      this.directionMemoryObject = change(this.directionMemoryObject)
-      // console.log(this.directionMemoryObject)
+      const number = this.directionStandandValueNumber
+      const change = obj => ({y:obj.y, x:obj.x - number})
+      this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('left')
     },
     // 右方向键
     directionRightFunc(){
-      const change = obj => ({y:obj.y, x:obj.x + 1})
-      this.directionMemoryObject = change(this.directionMemoryObject)
-      // console.log(this.directionMemoryObject)
+      const number = this.directionStandandValueNumber
+      const change = obj => ({y:obj.y, x:obj.x + number})
+      this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('right')
     },
     // 下方向键
     directionBottomFunc(){
-      const change = obj => ({y:obj.y + 1, x:obj.x})
-      this.directionMemoryObject = change(this.directionMemoryObject)
-      // console.log(this.directionMemoryObject)
+      const number = this.directionStandandValueNumber
+      const change = obj => ({y:obj.y + number, x:obj.x})
+      this.viewXYCoordinateObject = this.checkViewCoorRangeFunc(change(this.viewXYCoordinateObject))
       this.calcNowSourceWidthHeightFunc('down')
+    },
+    // 获取差值坐标取值范围
+    checkViewCoorRangeFunc(obj){
+      console.log(obj)
+      console.log(obj.x)
+      const standand = {
+        x:[-this.prototypeXYCoordinateObject.x,this.prototypeXYCoordinateObject.x],
+        y:[-this.prototypeXYCoordinateObject.y,this.prototypeXYCoordinateObject.y]
+      }
+      console.log(standand['x'][0])
+      obj.x < standand['x'][0] ? obj.x = standand['x'][0] : ''
+      obj.x > standand['x'][1] ? obj.x = standand['x'][1] : ''
+      obj.y < standand['y'][0] ? obj.y = standand['y'][0] : ''
+      obj.y > standand['y'][1] ? obj.y = standand['y'][1] : ''
+      return obj
     },
     // 获取方向键对象取值范围
     getDirectionNumberRange(){
@@ -663,6 +685,7 @@ export default {
         standand = this.directionStandandValueNumber;
       const now_w = parseInt(w / zoom),
         now_h = parseInt(h / zoom);
+      // let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x00, y00, w - now_w, h - now_h)
       let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x00, y00, w - now_w, h - now_h)
       // console.log(x10, x20, x00)
       // console.log(x00, y00, w, h, now_w, now_h)
@@ -671,16 +694,20 @@ export default {
         x:x1,
         y:y1
       }      
-      console.log(this.scrollViewCoorObject.y)
+      // console.log(this.scrollViewCoorObject.y)
       // 计算原型坐标
       this.calcPrototypeXYCoordinateObjectFunc(w, h, zoom)
-      // 计算原型坐标和现坐标的偏差值
+      // 计算原型坐标和现坐标的偏差值 viewXYCoordinateObject
+      // console.log(this.viewXYCoordinateObject.x)
       const dmoOrigin = this.calcSubAboutPrototypeAndNowCoorFunc(this.prototypeXYCoordinateObject, this.scrollViewCoorObject)
       // 重设方向键记录
-      this.directionMemoryObject = {
-        x:parseInt(dmoOrigin.x / standand),
-        y:parseInt(dmoOrigin.y / standand)
-      }
+      // this.directionMemoryObject = {
+      //   x:parseInt(dmoOrigin.x / standand),
+      //   y:parseInt(dmoOrigin.y / standand)
+      // }
+      console.log("view", this.viewXYCoordinateObject.x)
+      console.log("scroll", this.scrollViewCoorObject.x)
+      console.log("prototype", this.prototypeXYCoordinateObject.x)
       // 调用渲染
       this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h, 'scroll')
       // // displayModel 坐标 -> dataModel坐标 必须在其他计算之前
@@ -778,27 +805,35 @@ export default {
     calcNowSourceWidthHeightFunc(type){
       const range_obj = this.getDirectionNumberRange()
       // 获取初始宽高 放大倍数
+      // 求差值坐标
       const w = this.canvasOriginSizeObject.width,
         h = this.canvasOriginSizeObject.height,
         dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, range_obj),
         standand = this.directionStandandValueNumber,
-        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];        
       let prototypeXYCoordinateObject = this.prototypeXYCoordinateObject,
-        viewXYCoordinateObject = this.viewXYCoordinateObject;
+        viewXYCoordinateObject = this.viewXYCoordinateObject,
+        scrollViewCoorObject = this.scrollViewCoorObject;
       // console.log("?", dmo)
       // 计算现在用的源图片宽高 源图片初始点坐标
       let now_w = parseInt(w / zoom_number),
-        now_h = parseInt(h / zoom_number),
-        x = parseInt((w - now_w) / 2) + dmo.x * standand,
-        y = parseInt((h - now_h) / 2) + dmo.y * standand;
+        now_h = parseInt(h / zoom_number);
+        // x = parseInt((w - now_w) / 2) + dmo.x * standand,
+        // y = parseInt((h - now_h) / 2) + dmo.y * standand;
       // x_max_stand:w - now_w, y_max_stand:h - now_h 两倍原型值 prototypeValue2X
       // (w - now_w) / 2,  (h - now_h) / 2 原型值：没有点过方向键时xy的值
       prototypeXYCoordinateObject.x = parseInt((w - now_w) / 2)
       prototypeXYCoordinateObject.y = parseInt((h - now_h) / 2)
+      // viewXYCoordinateObject range change
+      viewXYCoordinateObject = this.checkViewCoorRangeFunc(viewXYCoordinateObject)
+      // x y
+      let x = prototypeXYCoordinateObject.x + viewXYCoordinateObject.x,
+        y = prototypeXYCoordinateObject.y + viewXYCoordinateObject.y;
       // console.log(prototypeXYCoordinateObject)
       // console.log(this.prototypeXYCoordinateObject)
       // 检查xy的值是否超出范围
-      let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
+      // let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x, y, w - now_w, h - now_h)
+      let x1 = x, y1 = y
       // x1 === 0 ? this.checkDirectionMemoryObject(x1, 0, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
       // x1 === x_max_stand ? this.checkDirectionMemoryObject(x1, x_max_stand, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
       // y1 === 0 ? this.checkDirectionMemoryObject(y1, 0, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
@@ -807,47 +842,56 @@ export default {
       // ???
       // console.log(x1, y1, prototypeXYCoordinateObject.y, standand, w)
       // 差值坐标
-      viewXYCoordinateObject.x = dmo.x * standand
-      viewXYCoordinateObject.y = dmo.y * standand
+      // viewXYCoordinateObject.x = dmo.x * standand
+      // viewXYCoordinateObject.y = dmo.y * standand
       // console.log("===820===", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
       // viewXYCoordinateObject = {
       //   x: x1,
       //   y: y1
       // }
       // console.log("dmo", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
+      scrollViewCoorObject.x = prototypeXYCoordinateObject.x + viewXYCoordinateObject.x
+      scrollViewCoorObject.y = prototypeXYCoordinateObject.y + viewXYCoordinateObject.y
+      console.log("view", this.viewXYCoordinateObject.x)
+      console.log("scroll", this.scrollViewCoorObject.x)
+      console.log("prototype", this.prototypeXYCoordinateObject.x)
       this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h, "button")
       // 计算scrollViewCoorObject
-      this.scrollViewCoorObject = ((type) => {
-        const _self = this.scrollViewCoorObject
-        // console.log("_self", _self)
-        let x_mixin = 0,
-          y_mixin = 0;
-        if (type === 'up') {
-          y_mixin = -10
-        } else if (type === 'down') {
-          y_mixin = 10
-        } else if (type === 'left') {
-          x_mixin = -10
-        } else if (type === 'right') {
-          x_mixin = 10
-        }
-        const max_and_min = this.checkXYCurrentRangeFunc()
-        // console.log(max_and_min)
-        let x = _self.x + x_mixin,
-          y = _self.y + y_mixin;
-        // console.log(x)
-        // console.log(y)
-        x < max_and_min.x[0] ? x = max_and_min.x[0] : ''
-        x > max_and_min.x[1] ? x = max_and_min.x[1] : ''
-        y < max_and_min.y[0] ? y = max_and_min.y[0] : ''
-        y > max_and_min.y[1] ? y = max_and_min.y[1] : ''
-        // console.log(x)
-        // console.log(y)
-        return {
-          x:x,
-          y:y,
-        }
-      })(type)
+      // this.scrollViewCoorObject = ((type) => {
+      //   const _self = this.scrollViewCoorObject
+      //   // console.log("_self", _self)
+      //   let x_mixin = 0,
+      //     y_mixin = 0;
+      //   if (type === 'up') {
+      //     y_mixin = -10
+      //   } else if (type === 'down') {
+      //     y_mixin = 10
+      //   } else if (type === 'left') {
+      //     x_mixin = -10
+      //   } else if (type === 'right') {
+      //     x_mixin = 10
+      //   }
+      //   const max_and_min = this.checkXYCurrentRangeFunc()
+      //   // console.log(max_and_min)
+      //   let x = _self.x + x_mixin,
+      //     y = _self.y + y_mixin;
+      //   // console.log(x)
+      //   // console.log(y)
+      //   x < max_and_min.x[0] ? x = max_and_min.x[0] : ''
+      //   x > max_and_min.x[1] ? x = max_and_min.x[1] : ''
+      //   y < max_and_min.y[0] ? y = max_and_min.y[0] : ''
+      //   y > max_and_min.y[1] ? y = max_and_min.y[1] : ''
+      //   // console.log(x)
+      //   // console.log(y)
+      //   return {
+      //     x:x,
+      //     y:y,
+      //   }
+      // })(type)      
+      // viewXYCoordinateObject = {
+      //   x:scrollViewCoorObject.x - prototypeXYCoordinateObject.x,
+      //   y:scrollViewCoorObject.y - prototypeXYCoordinateObject.y
+      // }
       // console.log(this.scrollViewCoorObject.y)
     },
     checkXYCurrentRangeFunc(){
@@ -920,6 +964,7 @@ export default {
       })
     },
     // 重设显示模型的数据 核心
+    // dataModel -> displayModel
     resetDisplayModelCoreFunc(pXYcWithOffset, zoom_number){
       let canvasMarkDataArray = this.canvasMarkDataArray
       this.anotherCanvasMarkDataArray.forEach((item, index, this_arr) => {
@@ -1029,6 +1074,9 @@ export default {
       }
       this.changeCanvasColorFilterFunc(this.canvasObject, new_color_array)
     }
+  },
+  components: {
+    count
   }
 };
 var timeoutFunction = null
@@ -1852,6 +1900,7 @@ function centerPointDeleteFunc (item, index, x, y) {
 function getCurrentDataModelValue(canvasMarkDataObject, type){
   // console.log("getCurrentDataModelValue")
   // canvasMarkDataObject.isDataModel2 = true
+  // prototype 原型 scroll 实际 view 差值
   const zoom_number = _this.zoomNumberArray[_this.zoomIndexNumber],
     proto_obj = _this.prototypeXYCoordinateObject,
     standand_number = _this.directionStandandValueNumber,
@@ -1868,8 +1917,8 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
       // A = (width - width / zoom比例) / 2
       // B = A + ([display]x / zoom比例)
       // C = B + (方向键值 * 方向值单位)
-      console.log(_this.prototypeXYCoordinateObject)
-      console.log(proto_obj.x, center_x / zoom_number, view_coordinate.x * standand_number)
+      // console.log(_this.prototypeXYCoordinateObject)
+      // console.log(proto_obj.x, center_x / zoom_number, view_coordinate.x * standand_number)
       const x_calc = (num) => proto_obj.x + num / zoom_number + view_coordinate.x
       const y_calc = (num) => proto_obj.y + num / zoom_number + view_coordinate.y
       const obj = {
@@ -1919,6 +1968,7 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
 // 把显示模型的数据转成数据模型
 // 当数据是只有xy值的对象时用这个
 // type connect 连接点 center 中心点
+// prototype 原型 scroll 实际 view 差值
 function getCurrentDataModelSinglePointValue(singlePointObject, type){
   if (!(type === "connect" || type === "center")) {
     console.warn("getCurrentDataModelSinglePointValue type ERROR: unknown type " + `=${type}=`)
