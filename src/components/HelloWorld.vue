@@ -169,7 +169,7 @@ export default {
       viewXYCoordinateObject:{
         x:0,
         y:0
-      },    // 此时源图视窗起始点（左上角）的XY坐标值 / 单位
+      },    // 此时源图视窗起始点（左上角）的XY坐标值 - XY坐标原型值
       prototypeXYCoordinateObject:{
         x:0,
         y:0
@@ -186,13 +186,17 @@ export default {
         x:0,
         y:0
       },   // 此时源图视窗起始点（左上角）的XY坐标值
-      scrollPXYcObject:null,    // 滚轮用
+      scrollPXYcObject:null,    // 滚轮用 暂时废弃
       scrollBaseObject:{
         deltaY:0,
         offsetX:0,
         offsetY:0
       },
-      scrollBaseBoolean:true,
+      scrollBaseBoolean:true,   // 滚轮是否生效，防止事件叠加导致计算错误
+      mouseMiddleStatusBoolean:false,   // 此时是否在按鼠标中键
+      mouseMiddleMoveStartCoorObject:null,
+      mouseMiddleMoveEndCoorObject:null,
+      moveImageCanvasFuncRuningStatusBoolean:false,
       directionStandandValueNumber:10    // 点1下移动几个像素
       // EDIT END
     };
@@ -585,13 +589,13 @@ export default {
     // 滚轮用
     // 计算dataModel
     getDataModelValueInScroll(coor, scrollViewCoorObject, zoom){
-      console.log(coor, zoom)
+      // console.log(coor, zoom)
       if (zoom === 1) {
         return coor
       } else {
-        console.log(scrollViewCoorObject)
-        console.log(parseInt(coor.x / zoom))
-        console.log(scrollViewCoorObject.x + parseInt(coor.x / zoom))
+        // console.log(scrollViewCoorObject)
+        // console.log(parseInt(coor.x / zoom))
+        // console.log(scrollViewCoorObject.x + parseInt(coor.x / zoom))
         return {
           x:scrollViewCoorObject.x + parseInt(coor.x / zoom),
           y:scrollViewCoorObject.y + parseInt(coor.y / zoom)
@@ -620,7 +624,7 @@ export default {
     // 滚轮放大图片计算
     // deltaY 滚轮值 offsetX 鼠标横坐标 offsetY 鼠标纵坐标
     scrollDriveCanvasZoomCalc(deltaY, offsetX, offsetY){
-      console.log("scrollDriveCanvasZoomCalc")
+      // console.log("scrollDriveCanvasZoomCalc")
       // deltaY < 0 放大 deltaY > 0 缩小
       // 计算now_zoom_number
       let now_zoom_number;
@@ -647,7 +651,7 @@ export default {
         x:offsetX,
         y:offsetY
       }, this.scrollViewCoorObject, this.zoomNumberArray[prev_zoom_number])
-      console.log(data_model_coor.x)
+      // console.log(data_model_coor.x)
       const x10 = data_model_coor.x,
         y10 = data_model_coor.y;      
       const x20 = parseInt(x10 / zoom),
@@ -660,13 +664,14 @@ export default {
       const now_w = parseInt(w / zoom),
         now_h = parseInt(h / zoom);
       let {x1, y1, x_max_stand, y_max_stand} = this.checkXYCurrentFunc(x00, y00, w - now_w, h - now_h)
-      console.log(x10, x20, x00)
-      console.log(x00, y00, w, h, now_w, now_h)
+      // console.log(x10, x20, x00)
+      // console.log(x00, y00, w, h, now_w, now_h)
       // 记录此时的初始点坐标，方便下次使用
       this.scrollViewCoorObject = {
         x:x1,
         y:y1
       }      
+      console.log(this.scrollViewCoorObject.y)
       // 计算原型坐标
       this.calcPrototypeXYCoordinateObjectFunc(w, h, zoom)
       // 计算原型坐标和现坐标的偏差值
@@ -714,22 +719,16 @@ export default {
       // const range_min_func = x => x < zoom_min ? zoom_min : x;
       // deltaY < 0 ? now_zoom_number = range_max_func(plus(prev_zoom_number)) : '';
       // deltaY > 0 ? now_zoom_number = range_min_func(sub(prev_zoom_number)) : '';
-      // // console.log(now_zoom_number)
       // // 计算之后的值赋值给zoomIndexNumber
       // this.zoomIndexNumber = now_zoom_number
       // const zoom = this.zoomNumberArray[this.zoomIndexNumber];
       // // 相当于点了几次方向键？
       // // 需要考虑放大之后 要减去鼠标的dataModelCoor与中心点dataModelCoor的差值
-      // // console.log(data_model_coor.x)
-      // // console.log(canvas_center.x)
-      // // console.log((data_model_coor.x - canvas_center.x) / now_zoom_number)
       // // 计算finalX finalY
       // let final_coor_x = offsetX,
       //   final_coor_y = offsetY;
       // let test_x = offsetX + ((offsetX - display_center.x) / zoom)
       // let test_y = offsetY + ((offsetY - display_center.y) / zoom)
-      // // console.log(test_x - final_coor_x)
-      // // console.log(data_model_coor.x - canvas_center.x)
       // let display_answer = {
       //   x:this.getDisplayCenterSingleFunc(data_model_coor.x, offsetX, zoom, w),
       //   y:this.getDisplayCenterSingleFunc(data_model_coor.y, offsetY, zoom, w)
@@ -753,13 +752,6 @@ export default {
       //       ,
       //   }
       // }
-      
-      
-      // // console.log(data_model_coor.x, offsetX, zoom, w)
-      // // console.log(this.getDisplayCenterSingleFunc(data_model_coor.x, offsetX, zoom, w))
-      // // console.log("display_center.x", data_model_coor.x - (offsetX - display_center.x) / zoom)
-      // // console.log(data_model_coor.x - canvas_center.x - (test_x - final_coor_x))
-      // // console.log(this.directionMemoryObject)
       // // 方向键范围校验
       // const dmo = this.directionMemoryObjectRangeCheckFunc(this.directionMemoryObject, this.getDirectionNumberRange());
       // // 计算原型坐标      
@@ -775,16 +767,12 @@ export default {
       //   x:prototypeXYCoordinateObject.x + dmo.x * standand,
       //   y:prototypeXYCoordinateObject.y + dmo.y * standand
       // }
-      // // console.log(prototypeXYCoordinateObject)
       // viewXYCoordinateObject.x = dmo.x
       // viewXYCoordinateObject.y = dmo.y
       // // render
       // this.renderAfterZoomChange(final_coor.x, final_coor.y, w, h, now_w, now_h)
-
       // display_center.x = display_answer.x,
-      // display_center.y = display_answer.y      
-      // console.log("===")
-      // console.log(display_answer.x, display_answer.y)
+      // display_center.y = display_answer.y
     },
     // 计算相关值
     calcNowSourceWidthHeightFunc(type){
@@ -815,23 +803,23 @@ export default {
       // x1 === x_max_stand ? this.checkDirectionMemoryObject(x1, x_max_stand, parseInt((w - now_w) / 2), 'x', this.directionMemoryObject) : ''
       // y1 === 0 ? this.checkDirectionMemoryObject(y1, 0, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
       // x1 === y_max_stand ? this.checkDirectionMemoryObject(y1, y_max_stand, parseInt((h - now_h) / 2), 'y', this.directionMemoryObject) : ''
-      // 方向键点击数修正
-      
+      // 方向键点击数修正      
       // ???
       // console.log(x1, y1, prototypeXYCoordinateObject.y, standand, w)
+      // 差值坐标
       viewXYCoordinateObject.x = dmo.x * standand
       viewXYCoordinateObject.y = dmo.y * standand
-      console.log("===820===", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
+      // console.log("===820===", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
       // viewXYCoordinateObject = {
       //   x: x1,
       //   y: y1
       // }
-      console.log("dmo", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
+      // console.log("dmo", viewXYCoordinateObject.x, viewXYCoordinateObject.y)
       this.renderAfterZoomChange(x1, y1, w, h, now_w, now_h, "button")
       // 计算scrollViewCoorObject
       this.scrollViewCoorObject = ((type) => {
         const _self = this.scrollViewCoorObject
-        console.log("_self", _self)
+        // console.log("_self", _self)
         let x_mixin = 0,
           y_mixin = 0;
         if (type === 'up') {
@@ -843,12 +831,37 @@ export default {
         } else if (type === 'right') {
           x_mixin = 10
         }
+        const max_and_min = this.checkXYCurrentRangeFunc()
+        // console.log(max_and_min)
+        let x = _self.x + x_mixin,
+          y = _self.y + y_mixin;
+        // console.log(x)
+        // console.log(y)
+        x < max_and_min.x[0] ? x = max_and_min.x[0] : ''
+        x > max_and_min.x[1] ? x = max_and_min.x[1] : ''
+        y < max_and_min.y[0] ? y = max_and_min.y[0] : ''
+        y > max_and_min.y[1] ? y = max_and_min.y[1] : ''
+        // console.log(x)
+        // console.log(y)
         return {
-          x:_self.x + x_mixin,
-          y:_self.y + y_mixin,
+          x:x,
+          y:y,
         }
       })(type)
-      console.log(this.scrollViewCoorObject)
+      // console.log(this.scrollViewCoorObject.y)
+    },
+    checkXYCurrentRangeFunc(){
+      const w = this.canvasOriginSizeObject.width,
+        h = this.canvasOriginSizeObject.height,
+        zoom_number = this.zoomNumberArray[this.zoomIndexNumber];
+      const now_w = parseInt(w / zoom_number),
+        now_h = parseInt(h / zoom_number);
+      const x_max = w - now_w,
+        y_max = h - now_h;
+      return {
+        x:[0, x_max],
+        y:[0, y_max]
+      }
     },
     // 检查XY是否在合法范围内
     checkXYCurrentFunc(x, y, x_max_stand, y_max_stand){
@@ -918,13 +931,13 @@ export default {
             center_x:centerPointObject.center_x - pXYcWithOffset.x,
             center_y:centerPointObject.center_y - pXYcWithOffset.y
           }
-          console.log(no_mult_coor_center)
+          // console.log(no_mult_coor_center)
           // 得到的坐标再乘以倍率
           const have_mult_coor_center = {
             center_x: parseInt(no_mult_coor_center.center_x * zoom_number),
             center_y: parseInt(no_mult_coor_center.center_y * zoom_number)
           }
-          console.log(have_mult_coor_center)
+          // console.log(have_mult_coor_center)
           // set
           setCoreObjectArray(canvasMarkDataArray[index], "canvasMarkDataObject", "update", 0, "centerPointObject", have_mult_coor_center)
           // 链接点 connect
@@ -941,8 +954,8 @@ export default {
               x: parseInt(no_mult_coor_connect.x * zoom_number),
               y: parseInt(no_mult_coor_connect.y * zoom_number)
             }
-            console.log(child_item)
-            console.log(have_mult_coor_connect)
+            // console.log(child_item)
+            // console.log(have_mult_coor_connect)
             new_point_arr.push(have_mult_coor_connect)
             // set
             // setCoreObjectArray(point_arr.pointDataArray, "pointDataArray", "update", child_index, null, have_mult_coor_connect)
@@ -1039,17 +1052,17 @@ function painting() {
     $(document)
         .off("click", ".image-canvas")
         .on("click", ".image-canvas", function(event) {
-          console.log("click")
+          // console.log("click")
           // console.log(_this.selectValueString)
           // 如果刚刚处于与多边形失去连接状态
           if (_this.polygonLatingAndFormingIsDisconnectedBoolean) {
-            console.log("click1")
+            // console.log("click1")
             _this.polygonLatingAndFormingIsDisconnectedBoolean = false
             return
           }
           // 如果处于可移动或者拉伸某多边形状态就不启动绘制函数
           if (_this.isMouseCanTranslatePolygonBoolean || _this.isMouseTranslatingPolygonBoolean || _this.isMouseCanTransformPolygonBoolean || _this.isMouseTransformingPolygonBoolean) {
-            console.log("click2")
+            // console.log("click2")
             // console.log(_this.isMouseCanTranslatePolygonBoolean)
             // console.log(_this.isMouseTranslatingPolygonBoolean)
             // console.log(_this.isMouseCanTransformPolygonBoolean)
@@ -1058,12 +1071,12 @@ function painting() {
           }
           // 如果不在绘制选项中就不绘制
           if (_this.selectValueString !== "1") {
-            console.log("click3")
+            // console.log("click3")
             return
           }
           // 多边形
           if (_this.selectValueString === "1") {
-            console.log("click4")
+            // console.log("click4")
             // alert("???")
             pointPaintingFunc(event)            
           }          
@@ -1282,12 +1295,13 @@ function painting() {
           if (_this.isEllipsePaintingBoolean && _this.selectValueString === "3") {            
             ellipsePaintingFunc(event, 2)
           }
+          // console.log("mousemove")         
         })
     // onmousedown
     $(document)
         .off("mousedown", ".image-canvas")
         .on("mousedown", ".image-canvas", function(event) {
-          console.log("mousedown")
+          // console.log("mousedown")
           if (_this.isMouseCanTranslatePolygonBoolean && event.which === 1) {
             // 鼠标点击 mousedown 记录坐标A
             _this.polygonMovingMouseStartedCoordinateObject = {
@@ -1323,6 +1337,10 @@ function painting() {
             // 开始绘制
             ellipsePaintingFunc(event, 1)
           }
+          // 移动底图
+          if (event.which === 2) {
+            
+          }
         })
     // onmouseup
     $(document)
@@ -1346,6 +1364,10 @@ function painting() {
           // 椭圆结束绘制
           if (_this.isEllipsePaintingBoolean && _this.selectValueString === "3") {
             ellipsePaintingFunc(event, 3)
+          }
+          // 移动底图
+          if (event.which === 2) {
+            _this.mouseMiddleStatusBoolean = false            
           }
         })
 }
@@ -1839,7 +1861,7 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
     return canvasMarkDataObject
   } else {
     if (type === "ellipse") {
-      console.log(canvasMarkDataObject)
+      // console.log(canvasMarkDataObject)
       let {center_x, center_y} = canvasMarkDataObject.centerPointObject
       // console.log({x, y})
       // console.log(proto_obj)
@@ -1918,7 +1940,7 @@ function getCurrentDataModelSinglePointValue(singlePointObject, type){
     let obj
     type === "connect" ? obj = {x:parseInt(x_calc(x)), y:parseInt(y_calc(y))} : obj = {center_x:parseInt(x_calc(x)), center_y:parseInt(y_calc(y))}
     // type === "center" ? obj = {center_x:x_calc(x), center_y:y_calc(y)} : ''
-    console.log(obj)
+    // console.log(obj)
     return obj
   }
 }
@@ -1932,6 +1954,68 @@ function deletePointBecauseDblclickFunc(){
   _this.$delete(pointDataArray, pointDataArray.length - 1)
   _this.$delete(pointDataArray, pointDataArray.length - 1)
   _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
+}
+// 鼠标中键移动底图的函数
+function moveImageCanvasFunc(event, type){
+  // const zoom_number = _this.zoomIndexNumber
+  // const zoom = _this.zoomNumberArray[zoom_number]  
+  // // 1被率时无法移动
+  // if (!zoom_number) {
+  //   return
+  // }
+  // // display_model
+  // const mouse_display_coor = {
+  //   x:event.offsetX,
+  //   y:event.offsetY
+  // }
+  // // data_model
+  // const data_model_coor = _this.getDataModelValueInScroll(mouse_display_coor, _this.scrollViewCoorObject, zoom)  
+  // // 注入到end对象
+  // if (type === 1) {
+  //   _this.mouseMiddleMoveStartCoorObject = {
+  //     x:data_model_coor.x,
+  //     y:data_model_coor.y
+  //   }
+  // } else if (type === 2) {    
+  //   _this.mouseMiddleMoveEndCoorObject = {
+  //     x:data_model_coor.x,
+  //     y:data_model_coor.y
+  //   }  
+  //   // 比对start和end对象
+  //   const sub_coor_obj = {
+  //     x:_this.mouseMiddleMoveEndCoorObject.x - _this.mouseMiddleMoveStartCoorObject.x,
+  //     y:_this.mouseMiddleMoveEndCoorObject.y - _this.mouseMiddleMoveStartCoorObject.y
+  //   }    
+  //   if (sub_coor_obj.x !== 0 || sub_coor_obj.y !== 0) {
+  //     console.log(sub_coor_obj.x)      
+  //     _this.scrollViewCoorObject.x = _this.scrollViewCoorObject.x + sub_coor_obj.x
+  //     _this.scrollViewCoorObject.y = _this.scrollViewCoorObject.y + sub_coor_obj.y
+  //     _this.viewXYCoordinateObject.x = _this.viewXYCoordinateObject.x + sub_coor_obj.x
+  //     _this.viewXYCoordinateObject.y = _this.viewXYCoordinateObject.y + sub_coor_obj.y
+  //     // 检验改变后的值是否合法
+  //     const range_obj = _this.checkXYCurrentRangeFunc()
+  //     let scroll_coor_x = _this.scrollViewCoorObject.x
+  //     let scroll_coor_y = _this.scrollViewCoorObject.y
+  //     scroll_coor_x < range_obj.x[0] ? scroll_coor_x = range_obj.x[0] : ''
+  //     scroll_coor_x > range_obj.x[1] ? scroll_coor_x = range_obj.x[1] : ''
+  //     scroll_coor_y < range_obj.y[0] ? scroll_coor_y = range_obj.y[0] : ''
+  //     scroll_coor_y > range_obj.y[1] ? scroll_coor_y = range_obj.y[1] : ''
+  //     if (false) {
+       
+  //     } else {
+  //       const result = {
+  //         x:scroll_coor_x,
+  //         y:scroll_coor_y,
+  //         w:_this.canvasOriginSizeObject.width,
+  //         h:_this.canvasOriginSizeObject.height,
+  //         now_w:parseInt(_this.canvasOriginSizeObject.width / zoom),
+  //         now_h:parseInt(_this.canvasOriginSizeObject.height / zoom)
+  //       }        
+  //       _this.renderAfterZoomChange(result.x, result.y, result.w, result.h, result.now_w, result.now_h, '')
+  //       _this.mouseMiddleMoveStartCoorObject = _this.mouseMiddleMoveEndCoorObject
+  //     }    
+  //   }
+  // }
 }
 // 绘制线函数
 // function drawPointLineFunc (canvas, pointDataArray, lineColorString, lineWidthNumber) {
@@ -2093,7 +2177,7 @@ function settlePointFunc (length) {
       // canvasMarkDataObject.completed = true
       setCoreObjectArray(canvasMarkDataObject, "canvasMarkDataObject", "update", null, "completed", true)
     } catch(error) {
-      console.log(error)
+      // console.log(error)
       // canvasMarkDataObject.completed = false
     }    
   }
