@@ -47,6 +47,7 @@
       <select v-model="selectColorFilterString">
         <option value="0">正常</option>
         <option value="1">反色</option>
+        <option value="2">火红</option>
       </select>
       <div>
         <p>此时视图素材宽高：{{ canvasSizeObject ? canvasSizeObject.width : ""}} {{ canvasSizeObject ? canvasSizeObject.height : "" }}</p>
@@ -129,6 +130,8 @@ export default {
       // EDIT ===>>> 20190109
       canvasObject:null,    // CanvasRenderingContext2D
       canvasOriginDataObject:null,   // CanvasRenderingContext2D-imgdata-origin
+      canvasOriginFilterDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 带滤镜的
+      canvasOriginNormalDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 不带滤镜的
       canvasOriginZoomDataObject:null,   // CanvasRenderingContext2D-imgdata-with-zoom-origin
       canvasMarkDataArray:[],    // 记录canvas标注数据的数组 视图模型
       anotherCanvasMarkDataArray:[],    // 记录canvas标注数据的数组 数据模型
@@ -203,7 +206,9 @@ export default {
       moveImageCanvasFuncRuningStatusBoolean:false,
       directionStandandValueNumber:10,    // 点1下移动几个像素
       keyEventBaseBoolean:true,    // 键盘是否生效
-      keyEventObject:0,
+      keyEventObject:null,    // 键盘事件对象
+      colorFilterWord:'normal',
+      colorFilterDataArray:[]   // 存各种颜色滤镜的数组
       // EDIT END
     };
   },
@@ -410,7 +415,7 @@ export default {
         e.preventDefault();
       })
       // this.test()
-    },
+    },    
     // 数组测试
     // test(){
     //   let unique = (arr) => ([...(new Set(arr))])
@@ -439,21 +444,59 @@ export default {
     //   })
     //   console.log(new_obj)
     // },
+    // type "0" "1"
+    // 更换滤镜选项 执行函数换色
+    watchDriveFilterChangeFunc(cv_data_obj, type){
+      function aaa(element, index, array) {
+        return element >= 0;
+      }
+      let new_color_obj = {...cv_data_obj}
+      let arr = new_color_obj.data
+      let arr_2 = arr.filter(aaa)
+      let color_array = new this.$Color_class(arr_2)
+      const new_color_array = ((color_array) => {
+        if (type === "0") {
+          return color_array.get_normal
+        } else if (type === "1") {
+          return color_array.get_reverse
+        } else if (type === "2") {
+          return color_array.get_hot
+        }
+      })(color_array)      
+      const origin_color = this.canvasOriginDataObject.data
+      this.updateArrayValue(origin_color, new_color_array)
+      // console.log(arr_2)
+      // console.log(this.canvasOriginFilterDataObject)
+      this.beforeRenderAfterZoomChangeFunc()
+    },
+    // 把渲染调用抽出来
+    beforeRenderAfterZoomChangeFunc(){
+      const w = this.canvasOriginSizeObject.width,
+        h = this.canvasOriginSizeObject.height,
+        {x, y} = this.scrollViewCoorObject,
+        zoom = this.zoomNumberArray[this.zoomIndexNumber];
+      const now_w = parseInt(w / zoom),
+        now_h = parseInt(h / zoom);
+      this.renderAfterZoomChange(x, y, w, h, now_w, now_h, '')
+    },
     // 计数器
     changeCountFunc($event){
-      // console.log($event)
       this.directionStandandValueNumber = $event
     },
     repeatGetCanvasDataFunc(){
-      // console.log("repeatGetCanvasDataFunc")
+      const _this = this      
+      const p = (resolve, reject) => {
+        _this.canvasOriginFilterDataObject = _this.canvasObject.getImageData(0, 0, width, height)
+        _this.canvasOriginNormalDataObject = _this.canvasObject.getImageData(0, 0, width, height)
+        _this.canvasOriginZoomDataObject = _this.canvasObject.getImageData(0, 0, width, height)
+        // _this.test(_this.canvasOriginFilterDataObject)
+        resolve('200 OK ');
+      }
       const width = this.canvasSizeObject.width, height = this.canvasSizeObject.height
-      this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, width, height)
-      this.canvasOriginZoomDataObject = this.canvasObject.getImageData(0, 0, width, height)
+      this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, width, height)      
       if (this.canvasOriginDataObject.data[3] !== 0) {
-        // const Color = this.$color
-        // let color_array = new this.$Color_class(this.canvasObject.getImageData(0, 0, width, height).data)
-        // let color_result = color_array.get_reverse
-        // console.log(color_result)
+        console.log(new Date().getTime())
+        const p_run = new Promise(p).then((result) => {console.log(result + new Date().getTime())}) 
         return
       } else {
         setTimeout(()=>{
@@ -470,15 +513,30 @@ export default {
       this.clearTestFunc()
     },
     clearTestFunc(){
-      // console.log("clearTestFunc")
       this.canvasObject.putImageData(this.canvasOriginZoomDataObject, 0, 0)
-      // console.log(this.canvasOriginDataObject)
+    },
+    trueClearTestFunc(){
+      this.canvasObject.putImageData(this.canvasOriginZoomDataObject, 0, 0)
     },
     moveTestFunc(){
       this.clearTestFunc()  // 清空之前的绘制 < 1ms
       this.movePointFunc()  // 移动某个图形 1ms
       this.reDrawFunc()    // 按照记录重绘 1ms
     },
+    // 检验中心点是否在第三象限
+    checkCenterPointInQuadrantFunc(item){
+      const center = item.centerPointObject
+      const check = (coor) => coor < 0 ? true : false
+      if (center === null) {
+        return false
+      }
+      if (check(center.center_x) || check(center.center_y)) {
+        return true
+      } else {
+        return false
+      }
+    },
+    // 重绘
     reDrawFunc(){
       // console.log("reDrawFunc")
       const mark_array = this.canvasMarkDataArray
@@ -498,18 +556,26 @@ export default {
         }
         // 绘制矩形
         if (item.completed && item.type === "rectangle") {
+          // 如果中心点在第三象限就不绘制
+          if (this.checkCenterPointInQuadrantFunc(item)) {
+            return
+          }
           drawRectBeforeFunc(item)
           drawArcBeforeFunc(item.pointDataArray, item.pointActiveIndex, item.type)
           drawCenterArcBeforeFunc(item.centerPointObject, item.centerPointActive)
         }
-        // 绘制矩形
-        if (item.completed && item.type === "rectangle") {
-          drawRectBeforeFunc(item)
-          drawArcBeforeFunc(item.pointDataArray, item.pointActiveIndex, item.type)
-          drawCenterArcBeforeFunc(item.centerPointObject, item.centerPointActive)
-        }
+        // // 绘制矩形
+        // if (item.completed && item.type === "rectangle") {
+        //   drawRectBeforeFunc(item)
+        //   drawArcBeforeFunc(item.pointDataArray, item.pointActiveIndex, item.type)
+        //   drawCenterArcBeforeFunc(item.centerPointObject, item.centerPointActive)
+        // }
         // 绘制椭圆
         if (item.completed && item.type === "ellipse") {
+          // 如果中心点在第三象限就不绘制
+          if (this.checkCenterPointInQuadrantFunc(item)) {
+            return
+          }
           drawEllipseBeforeFunc(item)
           drawArcBeforeFunc(item.pointDataArray, item.pointActiveIndex, item.type)
           drawCenterArcBeforeFunc(item.centerPointObject, item.centerPointActive)
@@ -943,6 +1009,7 @@ export default {
         hideCanvasHTML.height = h;
       let hideCanvasObject = hideCanvasHTML.getContext('2d')
       hideCanvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
+      // console.log(this.canvasOriginFilterDataObject)
       hideCanvasHTML.toBlob(function (e) {
         // console.log(e)
         const reader = new FileReader()
@@ -972,6 +1039,7 @@ export default {
             _this.reDrawFunc()
             // img从DOM中移除
             document.body.removeChild(img)
+            console.log(new Date().getTime())
           }
         }
       })
@@ -1072,20 +1140,7 @@ export default {
     },
     // 色彩滤镜选项
     selectColorFilterString:function(new_value, old_value){
-      function aaa(element, index, array) {
-        return element >= 0;
-      }
-      let new_color_obj = {...this.canvasOriginDataObject}
-      let arr = new_color_obj.data
-      let arr_2 = arr.filter(aaa)
-      let color_array = new this.$Color_class(arr_2)
-      let new_color_array
-      if (new_value === "0") {
-        new_color_array = color_array.get_normal
-      } else if (new_value === "1") {
-        new_color_array = color_array.get_reverse
-      }
-      this.changeCanvasColorFilterFunc(this.canvasObject, new_color_array)
+      this.watchDriveFilterChangeFunc(this.canvasOriginFilterDataObject, new_value)
     }
   },
   components: {
