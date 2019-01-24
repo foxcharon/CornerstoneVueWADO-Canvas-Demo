@@ -48,6 +48,7 @@
         <option value="0">正常</option>
         <option value="1">反色</option>
         <option value="2">火红</option>
+        <option value="3">彩虹色</option>
       </select>
       <div>
         <p>此时视图素材宽高：{{ canvasSizeObject ? canvasSizeObject.width : ""}} {{ canvasSizeObject ? canvasSizeObject.height : "" }}</p>
@@ -129,9 +130,9 @@ export default {
       isShow: true,
       // EDIT ===>>> 20190109
       canvasObject:null,    // CanvasRenderingContext2D
-      canvasOriginDataObject:null,   // CanvasRenderingContext2D-imgdata-origin
-      canvasOriginFilterDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 带滤镜的
-      canvasOriginNormalDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 不带滤镜的
+      canvasOriginDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 带滤镜
+      canvasOriginFilterDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 不带滤镜
+      canvasOriginNormalDataObject:null,   // CanvasRenderingContext2D-imgdata-origin 未使用
       canvasOriginZoomDataObject:null,   // CanvasRenderingContext2D-imgdata-with-zoom-origin
       canvasMarkDataArray:[],    // 记录canvas标注数据的数组 视图模型
       anotherCanvasMarkDataArray:[],    // 记录canvas标注数据的数组 数据模型
@@ -461,6 +462,8 @@ export default {
           return color_array.get_reverse
         } else if (type === "2") {
           return color_array.get_hot
+        } else if (type === "3") {
+          return color_array.get_rainbow
         }
       })(color_array)      
       const origin_color = this.canvasOriginDataObject.data
@@ -602,17 +605,15 @@ export default {
       }      
     },
     // 滤镜
-    changeCanvasColorFilterFunc(canvas, new_color_array){
-      // console.log(this.canvasOriginDataObject)
-      // console.log(new_color_array)
-      this.clearTestFunc()
-      const width = this.canvasSizeObject.width, 
-        height = this.canvasSizeObject.height;
-      let c = this.canvasObject.getImageData(0, 0, width, height)
-      this.updateArrayValue(c.data, new_color_array)
-      this.canvasObject.putImageData(c, 0, 0)
-      this.reDrawFunc()
-    },
+    // changeCanvasColorFilterFunc(canvas, new_color_array){
+    //   this.clearTestFunc()
+    //   const width = this.canvasSizeObject.width, 
+    //     height = this.canvasSizeObject.height;
+    //   let c = this.canvasObject.getImageData(0, 0, width, height)
+    //   this.updateArrayValue(c.data, new_color_array)
+    //   this.canvasObject.putImageData(c, 0, 0)
+    //   this.reDrawFunc()
+    // },
     // update uint8array
     updateArrayValue(c, d){
       d.forEach((item, index)=>{
@@ -1135,7 +1136,6 @@ export default {
     selectValueString:function(new_value, old_value){
       if (new_value === "1" && this.isCanCopyOriginCanvasDataBoolean) {
         this.isCanCopyOriginCanvasDataBoolean = false
-        // this.canvasOriginDataObject = this.canvasObject.getImageData(0, 0, this.canvasSizeObject.width, this.canvasSizeObject.height)
       }
     },
     // 色彩滤镜选项
@@ -1918,12 +1918,12 @@ function pointDeleteFunc (event) {
     _this.canvasMarkDataArray.forEach((item, index) => {
       // 计算中心点
       // result boolean
-      const result = centerPointDeleteFunc(item, index, x, y)
+      const result = centerPointDeleteFunc(item, index, x, y, _this.centerPointHoverJudgeNumber)
       // 如果返回true就跳出foreach
       if (result) {
         catch_item = item
         catch_index = index
-        console.log(catch_item)
+        // console.log(catch_item)
         throw new Error("end_foreach");
       } 
       // 计算连接点
@@ -1984,7 +1984,7 @@ function pointDeleteFunc (event) {
   _this.reDrawFunc()
 }
 // 检查想删除的点是不是中心点
-function centerPointDeleteFunc (item, index, x, y) {
+function centerPointDeleteFunc (item, index, x, y, judge_number) {
   // 如果多边形没画完，就不存在中心点
   if (!item.completed || !item.centerPointObject) {
     return false
@@ -1995,7 +1995,7 @@ function centerPointDeleteFunc (item, index, x, y) {
   // const hori = center_x - x, vert = center_y - y
   // const distance = Math.sqrt(hori*hori + vert*vert)
   let distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, center_x, center_y)
-  const judge_number = _this.centerPointHoverJudgeNumber
+  // const judge_number = _this.centerPointHoverJudgeNumber
   if (distance < judge_number) {
     return true
   } else {

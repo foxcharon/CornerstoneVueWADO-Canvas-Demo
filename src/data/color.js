@@ -34,7 +34,15 @@ export default class Color {
         this.range_max = 256;
     }
     get get_rainbow() {
-        return this.rainbow
+        let arr = this.color_array
+        let length = arr.length
+        for (let i = 0; i < length; i+=4) {
+            arr[i] = this.rainbow["red"][arr[i]]
+            arr[i + 1] = this.rainbow["green"][arr[i + 1]]
+            arr[i + 2] = this.rainbow["blue"][arr[i + 2]]
+        }
+        console.log(arr)
+        return arr
     }
     get get_hot_iron() {
         return this.hot_iron
