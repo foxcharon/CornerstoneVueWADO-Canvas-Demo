@@ -82,6 +82,27 @@ export default class Color {
         }
         return arr
     }
+    // 变亮
+    get get_add_bright(){
+        let arr = this.color_array
+        let length = arr.length
+        for (let i = 0; i < length; i+=4) {
+            arr[i] = this.toAddBright(arr[i])
+            arr[i + 1] = this.toAddBright(arr[i + 1])
+            arr[i + 2] = this.toAddBright(arr[i + 2])
+        }
+        return arr
+    }
+    get get_sub_bright(){
+        let arr = this.color_array
+        let length = arr.length
+        for (let i = 0; i < length; i+=4) {
+            arr[i] = this.toSubBright(arr[i])
+            arr[i + 1] = this.toSubBright(arr[i + 1])
+            arr[i + 2] = this.toSubBright(arr[i + 2])
+        }
+        return arr
+    }
     normal(i)
     {
         return i
@@ -123,7 +144,24 @@ export default class Color {
             }
         }
         return val;
-    }  
+    }
+    // 亮度
+    toAddBright(i){
+        var val = i + 5
+        if (val > this.range_max-1) {
+            return this.range_max-1
+        } else {
+            return val
+        }
+    }
+    toSubBright(i){
+        var val = i - 5
+        if (val < 0) {
+            return 0
+        } else {
+            return val
+        }
+    }
     // build (func)
     // {
     //     var lut = [];

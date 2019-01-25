@@ -1918,7 +1918,7 @@ function pointDeleteFunc (event) {
     _this.canvasMarkDataArray.forEach((item, index) => {
       // 计算中心点
       // result boolean
-      const result = centerPointDeleteFunc(item, index, x, y, _this.centerPointHoverJudgeNumber)
+      const result = _this.$Tools.centerPointDeleteFunc(item, index, x, y, _this.centerPointHoverJudgeNumber, _this.$Painting_tools.calcPointDistanceFunc)
       // 如果返回true就跳出foreach
       if (result) {
         catch_item = item
@@ -1984,7 +1984,7 @@ function pointDeleteFunc (event) {
   _this.reDrawFunc()
 }
 // 检查想删除的点是不是中心点
-function centerPointDeleteFunc (item, index, x, y, judge_number) {
+function centerPointDeleteFunc (item, index, x, y, judge_number, func) {
   // 如果多边形没画完，就不存在中心点
   if (!item.completed || !item.centerPointObject) {
     return false
@@ -1994,7 +1994,7 @@ function centerPointDeleteFunc (item, index, x, y, judge_number) {
   // 横向距离  纵向距离
   // const hori = center_x - x, vert = center_y - y
   // const distance = Math.sqrt(hori*hori + vert*vert)
-  let distance = _this.$Painting_tools.calcPointDistanceFunc(x, y, center_x, center_y)
+  let distance = func(x, y, center_x, center_y)
   // const judge_number = _this.centerPointHoverJudgeNumber
   if (distance < judge_number) {
     return true
@@ -2013,9 +2013,9 @@ function getCurrentDataModelValue(canvasMarkDataObject, type){
     proto_obj = _this.prototypeXYCoordinateObject,
     standand_number = _this.directionStandandValueNumber,
     view_coordinate = _this.viewXYCoordinateObject;
-  // zoom为 1时直接返回原对象
-  if (zoom_number === 1) {
-    return canvasMarkDataObject
+  // zoom为 1时直接返回原对象错误（因为引用的问题，所以不能直接返回原对象）
+  if (false) {
+    // return canvasMarkDataObject
   } else {
     if (type === "ellipse") {
       // console.log(canvasMarkDataObject)
@@ -2113,7 +2113,7 @@ function deletePointBecauseDblclickFunc(){
   _this.$delete(pointDataArray, pointDataArray.length - 1)
   _this.$set(_this.canvasMarkDataArray, _this.canvasMarkDataArray.length - 1, canvasMarkDataObject)
 }
-// 鼠标中键移动底图的函数
+// 鼠标中键移动底图的函数 （已作废）
 function moveImageCanvasFunc(event, type){
   // const zoom_number = _this.zoomIndexNumber
   // const zoom = _this.zoomNumberArray[zoom_number]  

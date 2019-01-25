@@ -167,5 +167,26 @@ export default class myUtils {
         }
 
     }
+    /**
+     *
+     * @desc   检查想删除的点是不是中心点
+     * @param  item, index, x, y, judge_number, func
+     * @return {Boolean}
+     */
+    static centerPointDeleteFunc (item, index, x, y, judge_number, func) {
+        // 如果多边形没画完，就不存在中心点
+        if (!item.completed || !item.centerPointObject) {
+            return false
+        }
+        const center_x = item.centerPointObject.center_x, 
+            center_y = item.centerPointObject.center_y;
+        // 横向距离  纵向距离
+        let distance = func(x, y, center_x, center_y)
+        if (distance < judge_number) {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
