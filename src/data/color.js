@@ -41,7 +41,6 @@ export default class Color {
             arr[i + 1] = this.rainbow["green"][arr[i + 1]]
             arr[i + 2] = this.rainbow["blue"][arr[i + 2]]
         }
-        console.log(arr)
         return arr
     }
     get get_hot_iron() {

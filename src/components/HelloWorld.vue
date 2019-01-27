@@ -50,6 +50,7 @@
         <option value="2">火红</option>
         <option value="3">彩虹色</option>
       </select>
+      <button @click="addBrightFunc">变亮</button> <button @click="subBrightFunc">变暗</button> <button @click="resetBrightFunc">亮度复原</button>
       <div>
         <p>此时视图素材宽高：{{ canvasSizeObject ? canvasSizeObject.width : ""}} {{ canvasSizeObject ? canvasSizeObject.height : "" }}</p>
         <p>此时放大级别：{{ zoomNumberArray[zoomIndexNumber] + "(" + zoomIndexNumber + ")"}}</p>
@@ -444,7 +445,22 @@ export default {
     //     }        
     //   })
     //   console.log(new_obj)
-    // },
+    // },    
+    // 增加亮度
+    // type + 变亮 - 变暗
+    watchDriveBrightChangeFunc(cv_data_obj, type){
+      let new_color_obj = {...cv_data_obj}
+      let arr = new_color_obj.data
+      let color_array = new this.$Color_class(arr)
+      const new_color_array = ((color_array) => {
+        if (type === "+") {
+          return color_array.get_add_bright
+        } else if (type === "-") {
+          return color_array.get_sub_bright
+        }
+      })(color_array)
+      console.log(this.canvasOriginFilterDataObject.data)
+    },
     // type "0" "1"
     // 更换滤镜选项 执行函数换色
     watchDriveFilterChangeFunc(cv_data_obj, type){
@@ -647,6 +663,21 @@ export default {
       } else {
         return this.directionStandandValueNumber
       }
+    },
+    // 重置亮度
+    resetBrightFunc(){
+      this.updateArrayValue(this.canvasOriginFilterDataObject.data, this.canvasOriginNormalDataObject.data)
+      this.watchDriveFilterChangeFunc(this.canvasOriginFilterDataObject, this.selectColorFilterString)
+    },
+    // 增大亮度
+    addBrightFunc(){
+      this.watchDriveBrightChangeFunc(this.canvasOriginFilterDataObject, "+")
+      this.watchDriveFilterChangeFunc(this.canvasOriginFilterDataObject, this.selectColorFilterString)
+    },
+    // 减小亮度
+    subBrightFunc(){
+      this.watchDriveBrightChangeFunc(this.canvasOriginFilterDataObject, "-")
+      this.watchDriveFilterChangeFunc(this.canvasOriginFilterDataObject, this.selectColorFilterString)
     },
     // 上方向键
     directionTopFunc(event){
