@@ -188,5 +188,141 @@ export default class myUtils {
             return false
         }
     }
+    /**
+     *
+     * @desc   如果此时所有多边形都不处于移动和拉伸状态
+     * @param  {Array} canvasMarkDataArray
+     * @return {Boolean}
+     */
+    static allPolygonLateAndFormCheckFunc(mark_array){
+        let result = true
+        mark_array.forEach((item, index, this_arr) => {
+            item.translateable ? result = false : ''
+            item.transformable ? result = false : ''
+        })
+        return result
+    }
+    /**
+     *
+     * @desc   检查XY是否在合法范围内
+     * @param  {Number} x, y, x_max_stand, y_max_stand
+     * @return {Object} {x1: x, y1: y, x_max_stand:x_max_stand, y_max_stand:y_max_stand}
+     */
+    static checkXYCurrentFunc(x, y, x_max_stand, y_max_stand){
+        if (x < 0) {
+            x = 0
+        }
+        if (y < 0) {
+            y = 0
+        }
+        if (x > x_max_stand) {
+            x = x_max_stand
+        }
+        if (y > y_max_stand) {
+            y = y_max_stand
+        }
+        return {x1: x, y1: y, x_max_stand:x_max_stand, y_max_stand:y_max_stand}
+    }
+    /**
+     *
+     * @desc   计算原型坐标和现坐标的偏差值
+     * @param  {Object} prototypeXYCoordinateObject, scrollViewCoorObject, viewXYCoordinateObject
+     * @return {Object} {x:scroll.x - prototype.x, y:scroll.y - prototype.y}
+     */
+    static calcSubAboutPrototypeAndNowCoorFunc(prototype, scroll, view){
+        view.x = scroll.x - prototype.x
+        view.y = scroll.y - prototype.y
+        return {
+            x:scroll.x - prototype.x,
+            y:scroll.y - prototype.y
+        }
+    }
+    /**
+     *
+     * @desc   计算原型坐标
+     * @param  {Number} w, h, zoom {Object} prototypeXYCoordinateObject
+     * @return void
+     */
+    static calcPrototypeXYCoordinateObjectFunc(w, h, zoom, prototype){
+        let now_w = parseInt(w / zoom),
+        now_h = parseInt(h / zoom);
+        prototype.x = parseInt((w - now_w) / 2)
+        prototype.y = parseInt((h - now_h) / 2)
+    }
+    /**
+     *
+     * @desc   滚轮用 计算dataModel
+     * @param  {Object} coor, scrollViewCoorObject {Number} zoom
+     * @return {Object} {x:scrollViewCoorObject.x + parseInt(coor.x / zoom), y:scrollViewCoorObject.y + parseInt(coor.y / zoom)}
+     */
+    static getDataModelValueInScroll(coor, scrollViewCoorObject, zoom){
+        if (zoom === 1) {
+            return coor
+        } else {
+            return {
+              x:scrollViewCoorObject.x + parseInt(coor.x / zoom),
+              y:scrollViewCoorObject.y + parseInt(coor.y / zoom)
+            }
+        }
+    }
+    /**
+     *
+     * @desc   directionMemoryObject 修正
+     * @param  {Object} directionMemoryObject, range_obj
+     * @return {Object} directionMemoryObject
+     */
+    static directionMemoryObjectRangeCheckFunc(directionMemoryObject, range_obj){
+        directionMemoryObject.x < range_obj.x[0] ? directionMemoryObject.x = parseInt(range_obj.x[0]) : ''
+        directionMemoryObject.y < range_obj.y[0] ? directionMemoryObject.y = parseInt(range_obj.y[0]) : ''
+        directionMemoryObject.x > range_obj.x[1] ? directionMemoryObject.x = parseInt(range_obj.x[1]) : ''
+        directionMemoryObject.y > range_obj.y[1] ? directionMemoryObject.y = parseInt(range_obj.y[1]) : ''
+        return directionMemoryObject
+    }
+    /**
+     *
+     * @desc   计算方向键公共值
+     * @param  {event Object} event {Number} directionStandandValueNumber
+     * @return {Number} directionMemoryObject | 1
+     */
+    static directionCommonValueFunc(event, directionStandandValueNumber){
+        if (event.keyCode) {
+            if (event.shiftKey) {
+              return 1
+            } else {
+              return directionStandandValueNumber
+            }
+        } else {
+            return directionStandandValueNumber
+        }
+    }
+    /**
+     *
+     * @desc   update uint8array
+     * @param  {uint8array} c d
+     * @return void
+     */
+    static updateArrayValue(c, d){
+        d.forEach((item, index)=>{
+            c[index] = item
+        })
+    }
+    /**
+     *
+     * @desc   检验中心点是否在第三象限
+     * @param  {Object} canvasMarkDataObject
+     * @return {Boolean}
+     */
+    static checkCenterPointInQuadrantFunc(item){
+        const center = item.centerPointObject
+        const check = (coor) => coor < 0 ? true : false
+        if (center === null) {
+            return false
+        }
+        if (check(center.center_x) || check(center.center_y)) {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 

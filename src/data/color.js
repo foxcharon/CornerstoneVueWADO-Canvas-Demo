@@ -1,6 +1,7 @@
 export default class Color {
-    constructor(color_array) {
+    constructor(color_array, bright_value = 1) {
         this.color_array = color_array
+        this.bright_value = bright_value
         // this.normal = {
         //     "red":   this.build(this.get_normal),
         //     "green": this.build(this.get_normal),
@@ -146,7 +147,7 @@ export default class Color {
     }
     // 亮度
     toAddBright(i){
-        var val = i + 5
+        var val = i + 1
         if (val > this.range_max-1) {
             return this.range_max-1
         } else {
@@ -154,7 +155,7 @@ export default class Color {
         }
     }
     toSubBright(i){
-        var val = i - 5
+        var val = i - 1
         if (val < 0) {
             return 0
         } else {
