@@ -94,8 +94,8 @@ export default class myUtils {
             return;
         }
         for(var i in obj){
-           newobj[i] = typeof obj[i] === 'object' ?
-           copy(obj[i]) : obj[i];
+           newobj[i] = (typeof obj[i] === 'object' && !(obj[i] === null)) ?
+           this.objectCopy(obj[i]) : obj[i];
         }
         return newobj
     }

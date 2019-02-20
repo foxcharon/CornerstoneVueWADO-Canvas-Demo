@@ -5,7 +5,7 @@
       <!-- DICOM CANVAS -->
         <span id="loadProgress">Diocm加载: </span>
         <!-- <div> -->
-          <div ref="canvas" class="image-canvas" oncontextmenu="return false" tabindex="-1"></div>
+          <div ref="canvas" class="image-canvas" oncontextmenu="return false" tabindex="-1" style="position:relative"></div>
         <!-- </div> -->
     </div>
 
@@ -297,7 +297,7 @@ export default {
       this.isInitLoad = false;
 
       // 为 canvasStack 找到 imageIds
-      let allImageIds = [];
+      let allImageIds = '';
       // this.exampleStudyImageIds.forEach(function(imageId) {
       //   let imageUrl = "wadouri:" + _self.baseUrl + imageId;
       //   allImageIds.push(imageUrl);
@@ -310,7 +310,7 @@ export default {
       // ]
       this.exampleStudyImageIds.forEach(function(imageId) {
         let imageUrl = "wadouri:" + imageId;
-        allImageIds.push(imageUrl);
+        allImageIds = imageUrl;
       });
 
       // Create canvasStack
@@ -334,7 +334,7 @@ export default {
 
       // Mouse
       // cornerstoneTools.wwwc.activate(canvas, 1); // left click
-      cornerstoneTools.pan.activate(canvas, 2); // middle click
+      // cornerstoneTools.pan.activate(canvas, 2); // middle click
       // cornerstoneTools.zoom.activate(canvas, 4); // right click
 
       // Touch / Gesture
@@ -1059,23 +1059,24 @@ export default {
       if (!this.renderAfterZoomChangeStatusBoolean) {
         return
       }
-      this.renderAfterZoomChangeStatusBoolean = false
-      console.log("0", new Date().getTime())
+      this.renderAfterZoomChangeStatusBoolean = false      
       const _this = this
       // this.canvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
       let hideCanvasHTML = document.getElementsByTagName("canvas")[1]
       hideCanvasHTML.width = w,
         hideCanvasHTML.height = h;
       let hideCanvasObject = hideCanvasHTML.getContext('2d')
+      console.log("0", new Date().getTime())
       hideCanvasObject.putImageData(this.canvasOriginDataObject, 0, 0)
+      console.log("0.1", new Date().getTime())
       // console.log(this.canvasOriginFilterDataObject)
       hideCanvasHTML.toBlob(function (e) {
-        console.log("0", new Date().getTime())
+        console.log("0.2", new Date().getTime())
         // console.log(e)
         const reader = new FileReader()
         reader.readAsDataURL(e)
         reader.onload = function(e){
-          console.log("0", new Date().getTime())
+          console.log("0.3", new Date().getTime())
           let img = new Image()
           img.src = e.target.result
           img.id = "abc"
@@ -1085,7 +1086,7 @@ export default {
           // img注入进DOM
           document.body.appendChild(img)
           img.onload = function () {
-            console.log("0", new Date().getTime())
+            console.log("0.4", new Date().getTime())
             let canvasHTML = document.getElementsByTagName("canvas")[0]
             let ctx = canvasHTML.getContext("2d")
             ctx.drawImage(img, x, y, now_w, now_h, 0, 0, w, h)
@@ -1696,8 +1697,9 @@ function ellipsePaintingFunc (event, type) {
     setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
     // displayModel -> dataModel
     // 显示模型的数据 - 数据模型的数据
-    // 用...运算符实现拷贝（不深）
-    const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    // 深拷贝
+    // const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    const modelDataObject = getCurrentDataModelValue(_this.$Tools.objectCopy({...canvasMarkDataObject, isDataModel:true}), canvasMarkDataObject.type)
     setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
   } else if (type === 2) {
     // console.log("???")
@@ -1797,8 +1799,9 @@ function rectanglePaintingFunc (event, type) {
     setCoreObjectArray(_this.canvasMarkDataArray, "canvasMarkDataArray", "add", _this.canvasMarkDataArray.length, null, canvasMarkDataObject)
     // displayModel -> dataModel
     // 显示模型的数据 - 数据模型的数据
-    // 用...运算符实现拷贝（不深）
-    const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    // 深拷贝
+    // const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    const modelDataObject = getCurrentDataModelValue(_this.$Tools.objectCopy({...canvasMarkDataObject, isDataModel:true}), canvasMarkDataObject.type)
     setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
   } else if (type === 2) {
     // 拖动时重设右下角点的值
@@ -1887,8 +1890,9 @@ function pointPaintingFunc (event) {
     // console.log(canvasMarkDataObject)
     // displayModel -> dataModel
     // 显示模型的数据 - 数据模型的数据
-    // 用...运算符实现拷贝（不深）
-    const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    // 深拷贝
+    // const modelDataObject = getCurrentDataModelValue({...canvasMarkDataObject, isDataModel:true}, canvasMarkDataObject.type)
+    const modelDataObject = getCurrentDataModelValue(_this.$Tools.objectCopy({...canvasMarkDataObject, isDataModel:true}), canvasMarkDataObject.type)
     setCoreObjectArray(_this.anotherCanvasMarkDataArray, "canvasMarkDataArray", "add", _this.anotherCanvasMarkDataArray.length, null, modelDataObject)
     // painting
     _this.isPointingBoolean = true    
